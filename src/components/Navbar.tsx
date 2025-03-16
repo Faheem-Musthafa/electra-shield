@@ -11,14 +11,14 @@ const Navbar: React.FC = () => {
 
   const handleLogout = () => {
     logout();
-    navigate('/');
+    navigate('/login');
   };
 
   return (
     <nav className="bg-vote-primary text-white shadow-md">
       <div className="container mx-auto px-4 py-3">
         <div className="flex justify-between items-center">
-          <Link to="/" className="flex items-center space-x-2">
+          <Link to={isAuthenticated ? "/home" : "/login"} className="flex items-center space-x-2">
             <Shield className="h-6 w-6 text-vote-accent" />
             <span className="text-xl font-bold">ElectraShield</span>
           </Link>

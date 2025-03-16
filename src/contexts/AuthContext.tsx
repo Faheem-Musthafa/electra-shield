@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from 'sonner';
 
@@ -20,6 +19,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isAdmin: boolean;
   markAsVoted: () => void;
+  validateAdminAccess: () => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -71,6 +71,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.setItem('electra-shield-user', JSON.stringify(matchedUser));
         toast.success('Login successful!');
         setIsLoading(false);
+        // Show admin toast if user is an admin
+        if (matchedUser.isAdmin) {
+          toast.success('Admin privileges detected');
+        }
         return true;
       } else {
         toast.error('Invalid credentials');
@@ -123,6 +127,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const validateAdminAccess = (): boolean => {
+    if (!user) return false;
+    if (!user.isAdmin) {
+      toast.error('You do not have admin privileges');
+      return false;
+    }
+    return true;
+  };
+
   return (
     <AuthContext.Provider 
       value={{ 
@@ -134,7 +147,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         requestOtp,
         isAuthenticated: !!user,
         isAdmin: user?.isAdmin || false,
-        markAsVoted
+        markAsVoted,
+        validateAdminAccess
       }}
     >
       {children}
