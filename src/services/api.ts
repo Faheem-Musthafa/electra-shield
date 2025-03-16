@@ -1,5 +1,5 @@
 
-import { generateOTP } from '@/utils/otpUtils';
+import { generateOTP, encryptUserData, decryptUserData } from '@/utils/otpUtils';
 
 // Simulate network delay
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -37,6 +37,30 @@ interface RegisterResponse {
   userId?: string;
 }
 
+// Helper function to load registered users from localStorage
+const loadRegisteredUsers = (): Array<any> => {
+  try {
+    const storedUsers = localStorage.getItem('electra-shield-registered-users');
+    if (storedUsers) {
+      const encryptedUsers = JSON.parse(storedUsers);
+      return encryptedUsers.map((encryptedUser: string) => decryptUserData(encryptedUser));
+    }
+  } catch (error) {
+    console.error('Error loading registered users:', error);
+  }
+  return [];
+};
+
+// Helper function to save registered users to localStorage
+const saveRegisteredUsers = (users: Array<any>): void => {
+  try {
+    const encryptedUsers = users.map(user => encryptUserData(user));
+    localStorage.setItem('electra-shield-registered-users', JSON.stringify(encryptedUsers));
+  } catch (error) {
+    console.error('Error saving registered users:', error);
+  }
+};
+
 /**
  * API Services - Mock implementation for frontend development
  * In a real application, these would make actual HTTP requests to a backend server
@@ -49,8 +73,12 @@ export const apiService = {
     // Simulate API call delay
     await delay(1500);
     
-    // Check if phone exists in our mock database
-    const userExists = MOCK_USERS.some(user => user.phone === phone);
+    // Get all users (mock + registered)
+    const registeredUsers = loadRegisteredUsers();
+    const allUsers = [...MOCK_USERS, ...registeredUsers];
+    
+    // Check if phone exists in our database
+    const userExists = allUsers.some(user => user.phone === phone);
     
     // Generate a 6-digit OTP
     const otp = generateOTP(6);
@@ -105,8 +133,11 @@ export const apiService = {
       };
     }
     
-    // OTP is valid, check if user exists
-    const user = MOCK_USERS.find(u => u.phone === phone);
+    // OTP is valid, check if user exists in mock or registered users
+    const registeredUsers = loadRegisteredUsers();
+    const allUsers = [...MOCK_USERS, ...registeredUsers];
+    const user = allUsers.find(u => u.phone === phone);
+    
     if (!user) {
       return {
         success: false,
@@ -131,17 +162,35 @@ export const apiService = {
     // Simulate API call delay
     await delay(2000);
     
+    // Get all current users
+    const registeredUsers = loadRegisteredUsers();
+    const allUsers = [...MOCK_USERS, ...registeredUsers];
+    
     // Check if phone already exists
-    if (MOCK_USERS.some(user => user.phone === phone)) {
+    if (allUsers.some(user => user.phone === phone)) {
       return {
         success: false,
         message: "Phone number already registered"
       };
     }
     
-    // In a real app, we would add the user to the database
-    // For this mock, we'll just simulate success but not actually add to our array
+    // Generate a new user ID
     const newUserId = Math.random().toString(36).substring(2, 10);
+    
+    // Create new user object
+    const newUser = {
+      id: newUserId,
+      name,
+      phone,
+      addressId,
+      isAdmin: false,
+      hasVoted: false,
+      registeredAt: new Date().toISOString()
+    };
+    
+    // Save to our "database" (localStorage)
+    registeredUsers.push(newUser);
+    saveRegisteredUsers(registeredUsers);
     
     console.log(`[DEV MODE] Registered new user: ${name}, ${phone}, ${addressId} with ID: ${newUserId}`);
     
@@ -161,6 +210,20 @@ export const apiService = {
     
     // In a real app, we would store the vote in a database
     console.log(`[DEV MODE] Vote cast by user ${userId}: ${encryptedVote}`);
+    
+    // Update user's voted status
+    try {
+      const registeredUsers = loadRegisteredUsers();
+      const updatedUsers = registeredUsers.map(user => {
+        if (user.id === userId) {
+          return { ...user, hasVoted: true };
+        }
+        return user;
+      });
+      saveRegisteredUsers(updatedUsers);
+    } catch (error) {
+      console.error('Error updating user vote status:', error);
+    }
     
     return {
       success: true,
