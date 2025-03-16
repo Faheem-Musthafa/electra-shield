@@ -1,5 +1,7 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from 'sonner';
+import { apiService } from '@/services/api';
 
 interface User {
   id: string;
@@ -24,12 +26,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock data for demo purposes
-const MOCK_USERS = [
-  { id: '1', name: 'Admin User', phone: '1234567890', isAdmin: true, hasVoted: false },
-  { id: '2', name: 'John Voter', phone: '9876543210', isAdmin: false, hasVoted: false },
-];
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -46,11 +42,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const requestOtp = async (phone: string): Promise<boolean> => {
     setIsLoading(true);
     try {
-      // Simulate API call to send OTP
-      console.log(`OTP sent to ${phone}`);
-      toast.success(`OTP sent to ${phone}`);
-      setIsLoading(false);
-      return true;
+      const response = await apiService.requestOTP(phone);
+      
+      if (response.success) {
+        toast.success(response.message);
+        
+        // In development mode, also show the OTP in a toast for easy testing
+        if (response.otp) {
+          toast.info(`Development OTP: ${response.otp}`, {
+            duration: 10000, // Show for 10 seconds
+          });
+        }
+        
+        setIsLoading(false);
+        return true;
+      } else {
+        toast.error(response.message);
+        setIsLoading(false);
+        return false;
+      }
     } catch (error) {
       console.error('Error sending OTP:', error);
       toast.error('Failed to send OTP. Please try again.');
@@ -62,22 +72,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (phone: string, otp: string): Promise<boolean> => {
     setIsLoading(true);
     try {
-      // In a real app, verify OTP with backend
-      // For demo, just check if the phone number exists in mock data
-      const matchedUser = MOCK_USERS.find(u => u.phone === phone);
+      const response = await apiService.verifyOTPAndLogin(phone, otp);
       
-      if (matchedUser && otp === '123456') { // Mock OTP verification
-        setUser(matchedUser);
-        localStorage.setItem('electra-shield-user', JSON.stringify(matchedUser));
-        toast.success('Login successful!');
-        setIsLoading(false);
+      if (response.success && response.user) {
+        setUser(response.user);
+        localStorage.setItem('electra-shield-user', JSON.stringify(response.user));
+        toast.success(response.message || 'Login successful!');
+        
         // Show admin toast if user is an admin
-        if (matchedUser.isAdmin) {
+        if (response.user.isAdmin) {
           toast.success('Admin privileges detected');
         }
+        
+        setIsLoading(false);
         return true;
       } else {
-        toast.error('Invalid credentials');
+        toast.error(response.message || 'Invalid credentials');
         setIsLoading(false);
         return false;
       }
@@ -92,19 +102,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const register = async (name: string, phone: string, addressId: string): Promise<boolean> => {
     setIsLoading(true);
     try {
-      // In a real app, send registration data to backend
-      // For demo, just pretend it worked
-      const newUser = {
-        id: Math.random().toString(36).substring(2, 10),
-        name,
-        phone,
-        isAdmin: false,
-        hasVoted: false
-      };
+      const response = await apiService.registerUser(name, phone, addressId);
       
-      toast.success('Registration successful! Please verify your phone number.');
-      setIsLoading(false);
-      return true;
+      if (response.success) {
+        toast.success(response.message);
+        setIsLoading(false);
+        return true;
+      } else {
+        toast.error(response.message);
+        setIsLoading(false);
+        return false;
+      }
     } catch (error) {
       console.error('Registration error:', error);
       toast.error('Registration failed. Please try again.');
