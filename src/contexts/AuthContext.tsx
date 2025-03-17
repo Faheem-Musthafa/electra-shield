@@ -37,13 +37,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [biometricType, setBiometricType] = useState<'fingerprint' | 'facial' | null>(null);
 
   useEffect(() => {
-    // Check for existing session in localStorage
     const savedUser = localStorage.getItem('electra-shield-user');
     if (savedUser) {
       setUser(JSON.parse(savedUser));
     }
     
-    // Check for biometric availability
     checkBiometricAvailability();
     
     setIsLoading(false);
@@ -69,10 +67,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (response.success) {
         toast.success(response.message);
         
-        // In development mode, also show the OTP in a toast for easy testing
         if (response.otp) {
           toast.info(`Development OTP: ${response.otp}`, {
-            duration: 10000, // Show for 10 seconds
+            duration: 10000,
           });
         }
         
@@ -101,7 +98,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.setItem('electra-shield-user', JSON.stringify(response.user));
         toast.success(response.message || 'Login successful!');
         
-        // Show admin toast if user is an admin
         if (response.user.isAdmin) {
           toast.success('Admin privileges detected');
         }
@@ -131,7 +127,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.setItem('electra-shield-user', JSON.stringify(response.user));
         toast.success(response.message || 'Biometric authentication successful!');
         
-        // Show admin toast if user is an admin
         if (response.user.isAdmin) {
           toast.success('Admin privileges detected');
         }
