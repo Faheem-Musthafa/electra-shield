@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from './AuthContext';
@@ -17,6 +16,8 @@ interface VoteContextType {
   results: { [key: string]: number };
   loadResults: () => Promise<void>;
   isLoadingResults: boolean;
+  syncVotes: () => Promise<boolean>;
+  lastSyncTime: Date | null;
 }
 
 // Mock candidates
@@ -39,6 +40,7 @@ export const VoteProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { user, markAsVoted } = useAuth();
   const [results, setResults] = useState<{ [key: string]: number }>({});
   const [isLoadingResults, setIsLoadingResults] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
 
   const castVote = async (candidateId: string): Promise<boolean> => {
     if (!user) {
@@ -93,13 +95,56 @@ export const VoteProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const syncVotes = async (): Promise<boolean> => {
+    if (!user?.isAdmin) {
+      toast.error('Only administrators can sync votes');
+      return false;
+    }
+
+    setIsLoadingResults(true);
+    try {
+      // Simulate a network request to sync votes from all voting stations
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // For demo, let's update our mock data with random new votes
+      const updatedVotes = { ...MOCK_VOTES };
+      
+      // Add some random new votes
+      const randomCandidateId = MOCK_CANDIDATES[Math.floor(Math.random() * MOCK_CANDIDATES.length)].id;
+      if (!updatedVotes[randomCandidateId]) {
+        updatedVotes[randomCandidateId] = [];
+      }
+      updatedVotes[randomCandidateId].push(`encrypted_vote_${Date.now()}`);
+      
+      // Update the results
+      const calculatedResults: { [key: string]: number } = {};
+      Object.keys(updatedVotes).forEach(candidateId => {
+        calculatedResults[candidateId] = updatedVotes[candidateId].length;
+      });
+      
+      setResults(calculatedResults);
+      setLastSyncTime(new Date());
+      setIsLoadingResults(false);
+      
+      toast.success('Votes synchronized successfully');
+      return true;
+    } catch (error) {
+      console.error('Error syncing votes:', error);
+      toast.error('Failed to sync votes');
+      setIsLoadingResults(false);
+      return false;
+    }
+  };
+
   return (
     <VoteContext.Provider value={{ 
       candidates: MOCK_CANDIDATES, 
       castVote, 
       results, 
       loadResults,
-      isLoadingResults
+      isLoadingResults,
+      syncVotes,
+      lastSyncTime
     }}>
       {children}
     </VoteContext.Provider>

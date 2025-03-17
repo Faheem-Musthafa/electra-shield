@@ -6,7 +6,10 @@ import { useVote } from '@/contexts/VoteContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
-import { BarChart, FileText, Users, Shield } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { BarChart, FileText, Users, Shield, Upload, Check, AlertCircle } from 'lucide-react';
+import { toast } from 'sonner';
+import { format } from 'date-fns';
 
 // Custom line chart component for vote trends
 const VoteChart: React.FC = () => {
@@ -63,8 +66,9 @@ const AuditLog: React.FC = () => {
 
 const AdminPanel: React.FC = () => {
   const { isAdmin } = useAuth();
-  const { candidates, results, loadResults, isLoadingResults } = useVote();
+  const { candidates, results, loadResults, isLoadingResults, syncVotes, lastSyncTime } = useVote();
   const [totalVotes, setTotalVotes] = useState(0);
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle');
   
   useEffect(() => {
     if (isAdmin) {
@@ -78,6 +82,28 @@ const AdminPanel: React.FC = () => {
     setTotalVotes(total);
   }, [results]);
   
+  const handleSyncVotes = async () => {
+    setSyncStatus('syncing');
+    try {
+      const success = await syncVotes();
+      if (success) {
+        setSyncStatus('success');
+        // Reset success status after 3 seconds
+        setTimeout(() => setSyncStatus('idle'), 3000);
+      } else {
+        setSyncStatus('error');
+        // Reset error status after 3 seconds
+        setTimeout(() => setSyncStatus('idle'), 3000);
+      }
+    } catch (error) {
+      console.error('Error during sync:', error);
+      setSyncStatus('error');
+      toast.error('An unexpected error occurred during synchronization');
+      // Reset error status after 3 seconds
+      setTimeout(() => setSyncStatus('idle'), 3000);
+    }
+  };
+  
   // Redirect non-admin users
   if (!isAdmin) {
     return <Navigate to="/" replace />;
@@ -87,9 +113,46 @@ const AdminPanel: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-vote-primary">Admin Dashboard</h1>
-        <div className="bg-vote-accent/10 text-vote-accent px-3 py-1 rounded-full text-sm font-medium flex items-center">
-          <Shield className="h-4 w-4 mr-1" />
-          Secure Admin Mode
+        <div className="flex items-center gap-4">
+          <div className="text-sm text-muted-foreground">
+            {lastSyncTime ? (
+              <span>Last sync: {format(lastSyncTime, 'MMM d, yyyy HH:mm:ss')}</span>
+            ) : (
+              <span>Never synced</span>
+            )}
+          </div>
+          <Button 
+            onClick={handleSyncVotes}
+            disabled={isLoadingResults || syncStatus === 'syncing'}
+            variant={syncStatus === 'error' ? "destructive" : (syncStatus === 'success' ? "outline" : "default")}
+            className="flex items-center gap-2"
+          >
+            {syncStatus === 'syncing' ? (
+              <>
+                <div className="animate-spin h-4 w-4 border-2 border-b-transparent rounded-full"></div>
+                <span>Syncing...</span>
+              </>
+            ) : syncStatus === 'success' ? (
+              <>
+                <Check className="h-4 w-4" />
+                <span>Synced</span>
+              </>
+            ) : syncStatus === 'error' ? (
+              <>
+                <AlertCircle className="h-4 w-4" />
+                <span>Sync Failed</span>
+              </>
+            ) : (
+              <>
+                <Upload className="h-4 w-4" />
+                <span>Sync Votes</span>
+              </>
+            )}
+          </Button>
+          <div className="bg-vote-accent/10 text-vote-accent px-3 py-1 rounded-full text-sm font-medium flex items-center">
+            <Shield className="h-4 w-4 mr-1" />
+            Secure Admin Mode
+          </div>
         </div>
       </div>
       
