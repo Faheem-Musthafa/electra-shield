@@ -1,5 +1,4 @@
-
-import { generateOTP, encryptUserData, decryptUserData } from '@/utils/otpUtils';
+import { generateOTP, encryptUserData, decryptUserData, authenticateWithBiometric } from '@/utils/otpUtils';
 
 // Simulate network delay
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -12,6 +11,12 @@ const MOCK_USERS = [
 
 // Store OTPs temporarily (in a real app, this would be in a database with TTL)
 const otpStore: Record<string, { otp: string, expiresAt: number }> = {};
+
+// Store biometric credentials (in a real app, this would be in a secure database)
+const biometricCredentials: Record<string, { userId: string, credential: string }> = {
+  '1': { userId: '1', credential: 'mock-admin-biometric-credential' },
+  '2': { userId: '2', credential: 'mock-voter-biometric-credential' }
+};
 
 interface LoginResponse {
   success: boolean;
@@ -35,6 +40,12 @@ interface RegisterResponse {
   success: boolean;
   message: string;
   userId?: string;
+}
+
+interface BiometricAuthResponse {
+  success: boolean;
+  message: string;
+  credential?: string;
 }
 
 // Helper function to load registered users from localStorage
@@ -229,5 +240,67 @@ export const apiService = {
       success: true,
       message: "Vote cast successfully"
     };
+  },
+
+  /**
+   * Authenticate using biometrics
+   */
+  async authenticateWithBiometrics(): Promise<LoginResponse> {
+    // Simulate API call delay
+    await delay(2000);
+    
+    try {
+      // Simulate biometric authentication
+      const authResult = await authenticateWithBiometric('mock-user-id');
+      
+      if (!authResult.success) {
+        return {
+          success: false,
+          message: authResult.message
+        };
+      }
+      
+      // For demo purposes, just return the admin user
+      return {
+        success: true,
+        user: MOCK_USERS[0], // Default to admin user for demo
+        message: authResult.message
+      };
+    } catch (error) {
+      console.error('Biometric authentication error:', error);
+      return {
+        success: false,
+        message: 'An error occurred during biometric authentication'
+      };
+    }
+  },
+
+  /**
+   * Register biometric credentials
+   */
+  async registerBiometricCredential(userId: string): Promise<BiometricAuthResponse> {
+    // Simulate API call delay
+    await delay(1500);
+    
+    try {
+      // In a real app, this would register the credential with the server
+      console.log(`[DEV MODE] Registering biometric credential for user ${userId}`);
+      
+      // Store mock credential
+      const mockCredential = `mock-biometric-credential-${Date.now()}`;
+      biometricCredentials[userId] = { userId, credential: mockCredential };
+      
+      return {
+        success: true,
+        message: 'Biometric credential registered successfully',
+        credential: mockCredential
+      };
+    } catch (error) {
+      console.error('Biometric registration error:', error);
+      return {
+        success: false,
+        message: 'Failed to register biometric credential'
+      };
+    }
   }
 };

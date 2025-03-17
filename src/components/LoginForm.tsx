@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -6,13 +7,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Key, Smartphone, Fingerprint } from 'lucide-react';
+import { Key, Smartphone, Fingerprint, Camera } from 'lucide-react';
 import { formatPhoneNumber } from '@/utils/otpUtils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { toast } from 'sonner';
 
 const LoginForm: React.FC = () => {
-  const { login, requestOtp, isLoading } = useAuth();
+  const { login, loginWithBiometrics, requestOtp, isLoading, biometricType, isBiometricsAvailable } = useAuth();
   const navigate = useNavigate();
   
   const [phone, setPhone] = useState('');
@@ -21,6 +22,54 @@ const LoginForm: React.FC = () => {
   const [authMethod, setAuthMethod] = useState('otp');
   const [resendDisabled, setResendDisabled] = useState(false);
   const [countdown, setCountdown] = useState(0);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const [isCameraActive, setIsCameraActive] = useState(false);
+  const videoRef = React.useRef<HTMLVideoElement>(null);
+
+  // Effect to check if biometrics are available and set default tab
+  useEffect(() => {
+    if (isBiometricsAvailable) {
+      setAuthMethod('biometric');
+    }
+    
+    return () => {
+      // Clean up camera stream when component unmounts
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [isBiometricsAvailable]);
+
+  // Handle camera activation for facial recognition
+  const activateCamera = async () => {
+    if (isCameraActive && cameraStream) {
+      // Stop the camera if it's already active
+      cameraStream.getTracks().forEach(track => track.stop());
+      setCameraStream(null);
+      setIsCameraActive(false);
+      return;
+    }
+    
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { 
+          facingMode: "user",
+          width: { ideal: 320 },
+          height: { ideal: 240 }
+        } 
+      });
+      
+      setCameraStream(stream);
+      setIsCameraActive(true);
+      
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    } catch (error) {
+      console.error('Error accessing camera:', error);
+      toast.error('Could not access camera. Please check permissions and try again.');
+    }
+  };
 
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,11 +117,13 @@ const LoginForm: React.FC = () => {
         navigate('/vote');
       }
     } else if (authMethod === 'biometric') {
-      // In a real app, integrate with Web Authentication API or fingerprint scanner
-      console.log('Biometric authentication not implemented in demo');
-      // Mock successful login for demo
-      const success = await login('1234567890', '123456');
+      const success = await loginWithBiometrics();
       if (success) {
+        // Clean up camera if it was active
+        if (cameraStream) {
+          cameraStream.getTracks().forEach(track => track.stop());
+          setCameraStream(null);
+        }
         navigate('/vote');
       }
     }
@@ -87,15 +138,19 @@ const LoginForm: React.FC = () => {
         </CardDescription>
       </CardHeader>
       
-      <Tabs defaultValue="otp" onValueChange={setAuthMethod}>
+      <Tabs defaultValue={isBiometricsAvailable ? "biometric" : "otp"} onValueChange={setAuthMethod}>
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="otp" className="flex items-center justify-center">
             <Smartphone className="h-4 w-4 mr-2" />
             <span>OTP</span>
           </TabsTrigger>
-          <TabsTrigger value="biometric" className="flex items-center justify-center">
-            <Fingerprint className="h-4 w-4 mr-2" />
-            <span>Biometric</span>
+          <TabsTrigger value="biometric" className="flex items-center justify-center" disabled={!isBiometricsAvailable}>
+            {biometricType === 'fingerprint' ? (
+              <Fingerprint className="h-4 w-4 mr-2" />
+            ) : (
+              <Camera className="h-4 w-4 mr-2" />
+            )}
+            <span>{biometricType === 'fingerprint' ? 'Fingerprint' : 'Facial ID'}</span>
           </TabsTrigger>
         </TabsList>
         
@@ -184,19 +239,48 @@ const LoginForm: React.FC = () => {
         <TabsContent value="biometric">
           <CardContent className="pt-6 text-center">
             <div className="flex flex-col items-center py-6">
-              <Fingerprint className="h-24 w-24 text-vote-secondary animate-pulse-slow" />
+              {biometricType === 'fingerprint' ? (
+                <Fingerprint className="h-24 w-24 text-vote-secondary animate-pulse-slow" />
+              ) : (
+                <div className="relative w-full max-w-[240px] mx-auto">
+                  {isCameraActive ? (
+                    <video 
+                      ref={videoRef}
+                      className="w-full h-auto rounded-lg border-2 border-vote-secondary"
+                      autoPlay
+                      playsInline
+                    />
+                  ) : (
+                    <Camera className="h-24 w-24 text-vote-secondary animate-pulse-slow mx-auto" />
+                  )}
+                </div>
+              )}
+              
               <p className="mt-4 text-muted-foreground">
-                Use biometric authentication to login securely
+                {biometricType === 'fingerprint' 
+                  ? 'Use fingerprint authentication to login securely'
+                  : 'Use facial recognition to login securely'}
               </p>
+              
+              {biometricType === 'facial' && (
+                <Button
+                  onClick={activateCamera}
+                  variant="outline"
+                  className="mt-4"
+                  type="button"
+                >
+                  {isCameraActive ? 'Deactivate Camera' : 'Activate Camera'}
+                </Button>
+              )}
             </div>
             
             <CardFooter className="flex justify-center pt-6 pb-0 px-0">
               <Button 
                 onClick={handleLogin} 
                 className="w-full bg-vote-secondary hover:bg-vote-primary"
-                disabled={isLoading}
+                disabled={isLoading || (biometricType === 'facial' && !isCameraActive)}
               >
-                {isLoading ? 'Authenticating...' : 'Authenticate with Biometrics'}
+                {isLoading ? 'Authenticating...' : `Authenticate with ${biometricType === 'fingerprint' ? 'Fingerprint' : 'Facial Recognition'}`}
               </Button>
             </CardFooter>
           </CardContent>

@@ -63,3 +63,53 @@ export const decryptUserData = (encryptedData: string): any => {
     throw new Error('Failed to decrypt user data');
   }
 };
+
+// Detect device type for biometric authentication
+export const detectDeviceType = (): 'mobile' | 'desktop' => {
+  const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
+  if (/android|iphone|ipad|ipod|blackberry|windows phone/i.test(userAgent)) {
+    return 'mobile';
+  }
+  return 'desktop';
+};
+
+// Check if biometric authentication is available
+export const isBiometricAvailable = async (): Promise<boolean> => {
+  try {
+    // Check if Web Authentication API is available
+    if (window.PublicKeyCredential) {
+      // Check if biometric authentication is available
+      return await (PublicKeyCredential as any).isUserVerifyingPlatformAuthenticatorAvailable();
+    }
+    return false;
+  } catch (error) {
+    console.error('Biometric availability check error:', error);
+    return false;
+  }
+};
+
+// Mock biometric authentication (in a real app, use Web Authentication API)
+export const authenticateWithBiometric = async (userId: string): Promise<{success: boolean, message: string}> => {
+  try {
+    const deviceType = detectDeviceType();
+    console.log(`[MOCK] Authenticating with ${deviceType === 'mobile' ? 'fingerprint' : 'facial recognition'}`);
+    
+    // Simulate biometric authentication
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    const mockSuccess = Math.random() > 0.2; // 80% success rate for demo
+    
+    return {
+      success: mockSuccess,
+      message: mockSuccess 
+        ? `Successfully authenticated with ${deviceType === 'mobile' ? 'fingerprint' : 'facial recognition'}`
+        : `Failed to authenticate with ${deviceType === 'mobile' ? 'fingerprint' : 'facial recognition'}. Please try again.`
+    };
+  } catch (error) {
+    console.error('Biometric authentication error:', error);
+    return {
+      success: false,
+      message: 'An error occurred during biometric authentication.'
+    };
+  }
+};
