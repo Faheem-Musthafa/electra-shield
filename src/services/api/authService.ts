@@ -1,15 +1,13 @@
 
-import { generateOTP, authenticateWithBiometric } from '@/utils/otpUtils';
+import { generateOTP } from '@/utils/otpUtils';
 import { 
   LoginResponse, 
   OtpResponse, 
-  RegisterResponse, 
-  BiometricAuthResponse 
+  RegisterResponse
 } from './types';
 import { 
   MOCK_USERS, 
   otpStore, 
-  biometricCredentials, 
   delay 
 } from './mockDatabase';
 import { loadRegisteredUsers, saveRegisteredUsers } from './storageUtils';
@@ -147,66 +145,4 @@ export async function registerUser(name: string, phone: string, addressId: strin
     userId: newUserId,
     message: "Registration successful"
   };
-}
-
-/**
- * Authenticate using biometrics
- */
-export async function authenticateWithBiometrics(): Promise<LoginResponse> {
-  // Simulate API call delay
-  await delay(2000);
-  
-  try {
-    // Simulate biometric authentication
-    const authResult = await authenticateWithBiometric('mock-user-id');
-    
-    if (!authResult.success) {
-      return {
-        success: false,
-        message: authResult.message
-      };
-    }
-    
-    // For demo purposes, just return the admin user
-    return {
-      success: true,
-      user: MOCK_USERS[0], // Default to admin user for demo
-      message: authResult.message
-    };
-  } catch (error) {
-    console.error('Biometric authentication error:', error);
-    return {
-      success: false,
-      message: 'An error occurred during biometric authentication'
-    };
-  }
-}
-
-/**
- * Register biometric credentials
- */
-export async function registerBiometricCredential(userId: string): Promise<BiometricAuthResponse> {
-  // Simulate API call delay
-  await delay(1500);
-  
-  try {
-    // In a real app, this would register the credential with the server
-    console.log(`[DEV MODE] Registering biometric credential for user ${userId}`);
-    
-    // Store mock credential
-    const mockCredential = `mock-biometric-credential-${Date.now()}`;
-    biometricCredentials[userId] = { userId, credential: mockCredential };
-    
-    return {
-      success: true,
-      message: 'Biometric credential registered successfully',
-      credential: mockCredential
-    };
-  } catch (error) {
-    console.error('Biometric registration error:', error);
-    return {
-      success: false,
-      message: 'Failed to register biometric credential'
-    };
-  }
 }

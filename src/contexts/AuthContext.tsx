@@ -1,7 +1,7 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { apiService } from '@/services/api';
-import { isBiometricAvailable, detectDeviceType } from '@/utils/otpUtils';
 
 interface User {
   id: string;
@@ -15,7 +15,6 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   login: (phone: string, otp: string) => Promise<boolean>;
-  loginWithBiometrics: () => Promise<boolean>;
   register: (name: string, phone: string, addressId: string) => Promise<boolean>;
   logout: () => void;
   requestOtp: (phone: string) => Promise<boolean>;
@@ -23,9 +22,6 @@ interface AuthContextType {
   isAdmin: boolean;
   markAsVoted: () => void;
   validateAdminAccess: () => boolean;
-  isBiometricsAvailable: boolean;
-  biometricType: 'fingerprint' | 'facial' | null;
-  registerBiometrics: (userId: string) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -33,8 +29,6 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isBiometricsAvailable, setIsBiometricsAvailable] = useState(false);
-  const [biometricType, setBiometricType] = useState<'fingerprint' | 'facial' | null>(null);
 
   useEffect(() => {
     const savedUser = localStorage.getItem('electra-shield-user');
@@ -42,22 +36,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(JSON.parse(savedUser));
     }
     
-    checkBiometricAvailability();
-    
     setIsLoading(false);
   }, []);
-
-  const checkBiometricAvailability = async () => {
-    const available = await isBiometricAvailable();
-    setIsBiometricsAvailable(available);
-    
-    if (available) {
-      const deviceType = detectDeviceType();
-      setBiometricType(deviceType === 'mobile' ? 'fingerprint' : 'facial');
-    } else {
-      setBiometricType(null);
-    }
-  };
 
   const requestOtp = async (phone: string): Promise<boolean> => {
     setIsLoading(true);
@@ -117,57 +97,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const loginWithBiometrics = async (): Promise<boolean> => {
-    setIsLoading(true);
-    try {
-      const response = await apiService.authenticateWithBiometrics();
-      
-      if (response.success && response.user) {
-        setUser(response.user);
-        localStorage.setItem('electra-shield-user', JSON.stringify(response.user));
-        toast.success(response.message || 'Biometric authentication successful!');
-        
-        if (response.user.isAdmin) {
-          toast.success('Admin privileges detected');
-        }
-        
-        setIsLoading(false);
-        return true;
-      } else {
-        toast.error(response.message || 'Biometric authentication failed');
-        setIsLoading(false);
-        return false;
-      }
-    } catch (error) {
-      console.error('Biometric login error:', error);
-      toast.error('Biometric authentication failed. Please try again.');
-      setIsLoading(false);
-      return false;
-    }
-  };
-
-  const registerBiometrics = async (userId: string): Promise<boolean> => {
-    setIsLoading(true);
-    try {
-      const response = await apiService.registerBiometricCredential(userId);
-      
-      if (response.success) {
-        toast.success(response.message);
-        setIsLoading(false);
-        return true;
-      } else {
-        toast.error(response.message);
-        setIsLoading(false);
-        return false;
-      }
-    } catch (error) {
-      console.error('Biometric registration error:', error);
-      toast.error('Failed to register biometric credentials. Please try again.');
-      setIsLoading(false);
-      return false;
-    }
-  };
-
   const register = async (name: string, phone: string, addressId: string): Promise<boolean> => {
     setIsLoading(true);
     try {
@@ -218,18 +147,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       value={{ 
         user, 
         isLoading, 
-        login, 
-        loginWithBiometrics,
+        login,
         register, 
         logout, 
         requestOtp,
         isAuthenticated: !!user,
         isAdmin: user?.isAdmin || false,
         markAsVoted,
-        validateAdminAccess,
-        isBiometricsAvailable,
-        biometricType,
-        registerBiometrics
+        validateAdminAccess
       }}
     >
       {children}

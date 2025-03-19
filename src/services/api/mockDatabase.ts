@@ -1,5 +1,5 @@
 
-import { MockUser, OtpData, BiometricCredential } from './types';
+import { MockUser, OtpData } from './types';
 
 // Simulate network delay
 export const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -12,9 +12,3 @@ export const MOCK_USERS: MockUser[] = [
 
 // Store OTPs temporarily (in a real app, this would be in a database with TTL)
 export const otpStore: Record<string, OtpData> = {};
-
-// Store biometric credentials (in a real app, this would be in a secure database)
-export const biometricCredentials: Record<string, BiometricCredential> = {
-  '1': { userId: '1', credential: 'mock-admin-biometric-credential' },
-  '2': { userId: '2', credential: 'mock-voter-biometric-credential' }
-};

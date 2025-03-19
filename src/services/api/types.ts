@@ -23,12 +23,6 @@ export interface RegisterResponse {
   userId?: string;
 }
 
-export interface BiometricAuthResponse {
-  success: boolean;
-  message: string;
-  credential?: string;
-}
-
 // Mock database and storage types
 export interface MockUser {
   id: string;
@@ -43,9 +37,4 @@ export interface MockUser {
 export interface OtpData {
   otp: string;
   expiresAt: number;
-}
-
-export interface BiometricCredential {
-  userId: string;
-  credential: string;
 }

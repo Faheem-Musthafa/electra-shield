@@ -11,8 +11,6 @@ export const apiService = {
   requestOTP: authService.requestOTP,
   verifyOTPAndLogin: authService.verifyOTPAndLogin,
   registerUser: authService.registerUser,
-  authenticateWithBiometrics: authService.authenticateWithBiometrics,
-  registerBiometricCredential: authService.registerBiometricCredential,
   
   // Vote services
   castVote: voteService.castVote
