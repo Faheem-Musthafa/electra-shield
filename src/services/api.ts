@@ -14,5 +14,6 @@ export const apiService = {
   
   // Vote services
   castVote: voteService.castVote,
-  addCandidate: voteService.addCandidate
+  addCandidate: voteService.addCandidate,
+  getVoteCounts: voteService.getVoteCounts
 };
