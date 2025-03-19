@@ -11,7 +11,7 @@ const LoginForm: React.FC = () => {
   const { isAdmin } = useAuth();
 
   const handleLoginSuccess = () => {
-    // Redirect admin users to admin panel, regular users to home page
+    // Redirect admin users to admin panel, regular users to index page
     if (isAdmin) {
       navigate('/admin');
     } else {
