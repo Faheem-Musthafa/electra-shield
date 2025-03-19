@@ -14,6 +14,8 @@ import VotePage from "./pages/VotePage";
 import VoteConfirmationPage from "./pages/VoteConfirmationPage";
 import AdminPage from "./pages/AdminPage";
 import NotFound from "./pages/NotFound";
+import AdminRoute from "./components/AdminRoute";
+import UserRoute from "./components/UserRoute";
 
 const queryClient = new QueryClient();
 
@@ -27,12 +29,12 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Navigate to="/login" replace />} />
-              <Route path="/home" element={<Index />} />
+              <Route path="/home" element={<UserRoute />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
-              <Route path="/vote" element={<VotePage />} />
-              <Route path="/vote-confirmation" element={<VoteConfirmationPage />} />
-              <Route path="/admin" element={<AdminPage />} />
+              <Route path="/vote" element={<UserRoute><VotePage /></UserRoute>} />
+              <Route path="/vote-confirmation" element={<UserRoute><VoteConfirmationPage /></UserRoute>} />
+              <Route path="/admin" element={<AdminRoute><AdminPage /></AdminRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
