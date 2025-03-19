@@ -8,7 +8,6 @@ import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Textarea } from '@/components/ui/textarea';
 import { Upload, Check, AlertCircle, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -76,18 +75,19 @@ const AdminPanel: React.FC = () => {
     }
   };
 
-  const onSubmitCandidate = (data: CandidateFormValues) => {
+  const onSubmitCandidate = async (data: CandidateFormValues) => {
     try {
-      addCandidate({
+      const success = await addCandidate({
         id: Date.now().toString(), // Generate a simple ID
         name: data.name,
         party: data.party,
-        image: data.image
+        image: data.image || "/placeholder.svg"
       });
       
-      toast.success('Candidate added successfully');
-      setShowCandidateForm(false);
-      form.reset();
+      if (success) {
+        setShowCandidateForm(false);
+        form.reset();
+      }
     } catch (error) {
       console.error('Error adding candidate:', error);
       toast.error('Failed to add candidate');
@@ -142,19 +142,6 @@ const AdminPanel: React.FC = () => {
         </div>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Votes Cast
-            </CardTitle>
-            <CardDescription className="text-3xl font-bold">
-              {totalVotes}
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
-      
       {/* Vote Counting Section */}
       <Card>
         <CardHeader>
@@ -162,7 +149,7 @@ const AdminPanel: React.FC = () => {
             <div>
               <CardTitle>Live Vote Tallies</CardTitle>
               <CardDescription>
-                Decrypted vote counts from the secure ballot system
+                Current vote counts: {totalVotes} total votes
               </CardDescription>
             </div>
             <Button 
@@ -268,7 +255,6 @@ const AdminPanel: React.FC = () => {
                         <Input 
                           placeholder="https://example.com/photo.jpg" 
                           {...field} 
-                          defaultValue="/placeholder.svg"
                         />
                       </FormControl>
                       <FormMessage />

@@ -15,7 +15,7 @@ const LoginForm: React.FC = () => {
     if (isAdmin) {
       navigate('/admin');
     } else {
-      navigate('/vote');
+      navigate('/home');
     }
   };
 

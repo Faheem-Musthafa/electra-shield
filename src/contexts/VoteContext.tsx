@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from './AuthContext';
 import { encryptVote } from '@/lib/encryption';
+import { apiService } from '@/services/api';
 
 export interface Candidate {
   id: string;
@@ -19,7 +20,7 @@ interface VoteContextType {
   isLoadingResults: boolean;
   syncVotes: () => Promise<boolean>;
   lastSyncTime: Date | null;
-  addCandidate: (candidate: Candidate) => void;
+  addCandidate: (candidate: Candidate) => Promise<boolean>;
 }
 
 // Mock candidates
@@ -60,14 +61,18 @@ export const VoteProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Encrypt the vote
       const encryptedVote = encryptVote(candidateId);
       
-      // In a real app, send the encrypted vote to the backend
-      console.log('Encrypted vote:', encryptedVote);
+      // Send the encrypted vote to the API
+      const response = await apiService.castVote(user.id, encryptedVote);
       
-      // Mark user as having voted
-      markAsVoted();
-      
-      toast.success('Your vote has been cast successfully!');
-      return true;
+      if (response.success) {
+        // Mark user as having voted
+        markAsVoted();
+        toast.success('Your vote has been cast successfully!');
+        return true;
+      } else {
+        toast.error(response.message || 'Failed to cast vote');
+        return false;
+      }
     } catch (error) {
       console.error('Error casting vote:', error);
       toast.error('Failed to cast vote. Please try again.');
@@ -139,25 +144,40 @@ export const VoteProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const addCandidate = (candidate: Candidate) => {
+  const addCandidate = async (candidate: Candidate): Promise<boolean> => {
     if (!user?.isAdmin) {
       toast.error('Only administrators can add candidates');
-      return;
+      return false;
     }
 
     // Check if a candidate with the same ID already exists
     if (candidates.some(c => c.id === candidate.id)) {
       toast.error('A candidate with this ID already exists');
-      return;
+      return false;
     }
 
-    // Add the new candidate to our state
-    setCandidates(prev => [...prev, candidate]);
-    
-    // Initialize an empty array for the new candidate's votes
-    MOCK_VOTES[candidate.id] = [];
-    
-    toast.success(`Candidate ${candidate.name} added successfully`);
+    try {
+      // Call the API to add the candidate
+      const response = await apiService.addCandidate(candidate);
+      
+      if (response.success) {
+        // Add the new candidate to our state
+        setCandidates(prev => [...prev, candidate]);
+        
+        // Initialize an empty array for the new candidate's votes
+        MOCK_VOTES[candidate.id] = [];
+        
+        toast.success(`Candidate ${candidate.name} added successfully`);
+        return true;
+      } else {
+        toast.error(response.message || 'Failed to add candidate');
+        return false;
+      }
+    } catch (error) {
+      console.error('Error adding candidate:', error);
+      toast.error('Failed to add candidate');
+      return false;
+    }
   };
 
   return (
