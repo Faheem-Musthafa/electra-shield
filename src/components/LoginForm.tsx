@@ -8,9 +8,15 @@ import LoginFooter from './login/LoginFooter';
 
 const LoginForm: React.FC = () => {
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
 
   const handleLoginSuccess = () => {
-    navigate('/vote');
+    // If user is admin, navigate to admin panel instead of vote page
+    if (isAdmin) {
+      navigate('/admin');
+    } else {
+      navigate('/vote');
+    }
   };
 
   return (
