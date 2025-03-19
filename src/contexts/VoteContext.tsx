@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from './AuthContext';
@@ -18,6 +19,7 @@ interface VoteContextType {
   isLoadingResults: boolean;
   syncVotes: () => Promise<boolean>;
   lastSyncTime: Date | null;
+  addCandidate: (candidate: Candidate) => void;
 }
 
 // Mock candidates
@@ -41,6 +43,7 @@ export const VoteProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [results, setResults] = useState<{ [key: string]: number }>({});
   const [isLoadingResults, setIsLoadingResults] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
+  const [candidates, setCandidates] = useState<Candidate[]>(MOCK_CANDIDATES);
 
   const castVote = async (candidateId: string): Promise<boolean> => {
     if (!user) {
@@ -110,7 +113,7 @@ export const VoteProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const updatedVotes = { ...MOCK_VOTES };
       
       // Add some random new votes
-      const randomCandidateId = MOCK_CANDIDATES[Math.floor(Math.random() * MOCK_CANDIDATES.length)].id;
+      const randomCandidateId = candidates[Math.floor(Math.random() * candidates.length)].id;
       if (!updatedVotes[randomCandidateId]) {
         updatedVotes[randomCandidateId] = [];
       }
@@ -136,15 +139,37 @@ export const VoteProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const addCandidate = (candidate: Candidate) => {
+    if (!user?.isAdmin) {
+      toast.error('Only administrators can add candidates');
+      return;
+    }
+
+    // Check if a candidate with the same ID already exists
+    if (candidates.some(c => c.id === candidate.id)) {
+      toast.error('A candidate with this ID already exists');
+      return;
+    }
+
+    // Add the new candidate to our state
+    setCandidates(prev => [...prev, candidate]);
+    
+    // Initialize an empty array for the new candidate's votes
+    MOCK_VOTES[candidate.id] = [];
+    
+    toast.success(`Candidate ${candidate.name} added successfully`);
+  };
+
   return (
     <VoteContext.Provider value={{ 
-      candidates: MOCK_CANDIDATES, 
+      candidates, 
       castVote, 
       results, 
       loadResults,
       isLoadingResults,
       syncVotes,
-      lastSyncTime
+      lastSyncTime,
+      addCandidate
     }}>
       {children}
     </VoteContext.Provider>

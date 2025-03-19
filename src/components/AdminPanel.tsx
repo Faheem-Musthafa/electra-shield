@@ -4,71 +4,43 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useVote } from '@/contexts/VoteContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
-import { BarChart, FileText, Users, Shield, Upload, Check, AlertCircle } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Textarea } from '@/components/ui/textarea';
+import { Upload, Check, AlertCircle, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
 
-// Custom line chart component for vote trends
-const VoteChart: React.FC = () => {
-  return (
-    <div className="bg-white p-6 rounded-lg shadow-sm h-[300px] flex items-center justify-center">
-      <p className="text-muted-foreground text-center">
-        Vote trend chart would be displayed here in a real application<br />
-        (using recharts or similar library)
-      </p>
-    </div>
-  );
-};
+// Define schema for adding a candidate
+const candidateSchema = z.object({
+  name: z.string().min(2, { message: "Name must be at least 2 characters" }),
+  party: z.string().min(1, { message: "Party name is required" }),
+  image: z.string().default("/placeholder.svg")
+});
 
-const AuditLog: React.FC = () => {
-  // Mock audit log entries
-  const auditLogs = [
-    { id: 1, event: 'Vote Cast', user: 'Anonymous Voter', timestamp: '2023-07-25 09:12:34', details: 'Vote encrypted and recorded' },
-    { id: 2, event: 'User Login', user: 'Admin User', timestamp: '2023-07-25 08:45:12', details: 'Admin login successful' },
-    { id: 3, event: 'Results Viewed', user: 'Admin User', timestamp: '2023-07-25 08:46:03', details: 'Election results accessed' },
-    { id: 4, event: 'Vote Cast', user: 'Anonymous Voter', timestamp: '2023-07-25 08:30:22', details: 'Vote encrypted and recorded' },
-    { id: 5, event: 'Vote Cast', user: 'Anonymous Voter', timestamp: '2023-07-25 08:15:45', details: 'Vote encrypted and recorded' },
-  ];
-
-  return (
-    <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-      <div className="p-4 border-b">
-        <h3 className="font-medium">System Audit Log</h3>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-4 py-3 text-left">Event</th>
-              <th className="px-4 py-3 text-left">User</th>
-              <th className="px-4 py-3 text-left">Timestamp</th>
-              <th className="px-4 py-3 text-left">Details</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {auditLogs.map((log) => (
-              <tr key={log.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3">{log.event}</td>
-                <td className="px-4 py-3">{log.user}</td>
-                <td className="px-4 py-3">{log.timestamp}</td>
-                <td className="px-4 py-3">{log.details}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-};
+type CandidateFormValues = z.infer<typeof candidateSchema>;
 
 const AdminPanel: React.FC = () => {
   const { isAdmin } = useAuth();
-  const { candidates, results, loadResults, isLoadingResults, syncVotes, lastSyncTime } = useVote();
+  const { candidates, results, loadResults, isLoadingResults, syncVotes, lastSyncTime, addCandidate } = useVote();
   const [totalVotes, setTotalVotes] = useState(0);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle');
+  const [showCandidateForm, setShowCandidateForm] = useState(false);
+  
+  // Initialize form
+  const form = useForm<CandidateFormValues>({
+    resolver: zodResolver(candidateSchema),
+    defaultValues: {
+      name: "",
+      party: "",
+      image: "/placeholder.svg"
+    }
+  });
   
   useEffect(() => {
     if (isAdmin) {
@@ -101,6 +73,24 @@ const AdminPanel: React.FC = () => {
       toast.error('An unexpected error occurred during synchronization');
       // Reset error status after 3 seconds
       setTimeout(() => setSyncStatus('idle'), 3000);
+    }
+  };
+
+  const onSubmitCandidate = (data: CandidateFormValues) => {
+    try {
+      addCandidate({
+        id: Date.now().toString(), // Generate a simple ID
+        name: data.name,
+        party: data.party,
+        image: data.image
+      });
+      
+      toast.success('Candidate added successfully');
+      setShowCandidateForm(false);
+      form.reset();
+    } catch (error) {
+      console.error('Error adding candidate:', error);
+      toast.error('Failed to add candidate');
     }
   };
   
@@ -149,10 +139,6 @@ const AdminPanel: React.FC = () => {
               </>
             )}
           </Button>
-          <div className="bg-vote-accent/10 text-vote-accent px-3 py-1 rounded-full text-sm font-medium flex items-center">
-            <Shield className="h-4 w-4 mr-1" />
-            Secure Admin Mode
-          </div>
         </div>
       </div>
       
@@ -166,137 +152,145 @@ const AdminPanel: React.FC = () => {
               {totalVotes}
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="text-xs text-muted-foreground">
-              Updated in real-time
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Voter Participation
-            </CardTitle>
-            <CardDescription className="text-3xl font-bold">
-              73%
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Progress value={73} className="h-2" />
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              System Security Status
-            </CardTitle>
-            <CardDescription className="text-3xl font-bold text-vote-success">
-              Secure
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xs text-muted-foreground">
-              Last security check: 2 minutes ago
-            </div>
-          </CardContent>
         </Card>
       </div>
       
-      <Tabs defaultValue="results">
-        <TabsList className="mb-4">
-          <TabsTrigger value="results" className="flex items-center">
-            <BarChart className="h-4 w-4 mr-2" />
-            Election Results
-          </TabsTrigger>
-          <TabsTrigger value="audit" className="flex items-center">
-            <FileText className="h-4 w-4 mr-2" />
-            Audit Log
-          </TabsTrigger>
-          <TabsTrigger value="users" className="flex items-center">
-            <Users className="h-4 w-4 mr-2" />
-            Voter Management
-          </TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="results" className="space-y-4">
-          <Card>
-            <CardHeader>
+      {/* Vote Counting Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <div>
               <CardTitle>Live Vote Tallies</CardTitle>
               <CardDescription>
                 Decrypted vote counts from the secure ballot system
               </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoadingResults ? (
-                <div className="flex justify-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-vote-secondary"></div>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  {candidates.map((candidate) => {
-                    const voteCount = results[candidate.id] || 0;
-                    const percentage = totalVotes > 0 
-                      ? Math.round((voteCount / totalVotes) * 100) 
-                      : 0;
-                    
-                    return (
-                      <div key={candidate.id} className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center">
-                            <img
-                              src={candidate.image}
-                              alt={candidate.name}
-                              className="h-8 w-8 rounded-full mr-3 bg-gray-200"
-                            />
-                            <div>
-                              <h4 className="font-medium">{candidate.name}</h4>
-                              <p className="text-sm text-muted-foreground">{candidate.party}</p>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <span className="font-bold">{voteCount}</span>
-                            <span className="text-sm text-muted-foreground ml-1">
-                              ({percentage}%)
-                            </span>
-                          </div>
+            </div>
+            <Button 
+              variant="outline" 
+              className="flex items-center gap-2"
+              onClick={() => setShowCandidateForm(!showCandidateForm)}
+            >
+              <Plus className="h-4 w-4" />
+              Add Candidate
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {isLoadingResults ? (
+            <div className="flex justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-vote-secondary"></div>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {candidates.map((candidate) => {
+                const voteCount = results[candidate.id] || 0;
+                const percentage = totalVotes > 0 
+                  ? Math.round((voteCount / totalVotes) * 100) 
+                  : 0;
+                
+                return (
+                  <div key={candidate.id} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <img
+                          src={candidate.image}
+                          alt={candidate.name}
+                          className="h-8 w-8 rounded-full mr-3 bg-gray-200"
+                        />
+                        <div>
+                          <h4 className="font-medium">{candidate.name}</h4>
+                          <p className="text-sm text-muted-foreground">{candidate.party}</p>
                         </div>
-                        <Progress value={percentage} className="h-2" />
                       </div>
-                    );
-                  })}
+                      <div className="text-right">
+                        <span className="font-bold">{voteCount}</span>
+                        <span className="text-sm text-muted-foreground ml-1">
+                          ({percentage}%)
+                        </span>
+                      </div>
+                    </div>
+                    <Progress value={percentage} className="h-2" />
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      
+      {/* Add Candidate Form */}
+      {showCandidateForm && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Add New Candidate</CardTitle>
+            <CardDescription>
+              Enter details to register a new candidate
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmitCandidate)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Candidate Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter candidate name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="party"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Political Party</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter party name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="image"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Photo URL (Optional)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="https://example.com/photo.jpg" 
+                          {...field} 
+                          defaultValue="/placeholder.svg"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <div className="flex items-center justify-end gap-2 pt-2">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => setShowCandidateForm(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit">Add Candidate</Button>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader>
-              <CardTitle>Vote Distribution Over Time</CardTitle>
-              <CardDescription>
-                Tracking voting patterns throughout the election period
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <VoteChart />
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="audit">
-          <AuditLog />
-        </TabsContent>
-        
-        <TabsContent value="users" className="text-center py-12">
-          <Users className="h-12 w-12 mx-auto text-gray-300 mb-4" />
-          <h3 className="text-lg font-medium mb-2">Voter Management</h3>
-          <p className="text-muted-foreground max-w-md mx-auto">
-            This section would contain voter registration verification and management tools
-            in a complete implementation.
-          </p>
-        </TabsContent>
-      </Tabs>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

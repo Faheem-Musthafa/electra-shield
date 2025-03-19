@@ -13,5 +13,6 @@ export const apiService = {
   registerUser: authService.registerUser,
   
   // Vote services
-  castVote: voteService.castVote
+  castVote: voteService.castVote,
+  addCandidate: voteService.addCandidate
 };
