@@ -3,7 +3,7 @@ import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Shield, ShieldCheck } from 'lucide-react';
+import { Shield, ShieldCheck, LayoutDashboard } from 'lucide-react';
 
 const Navbar: React.FC = () => {
   const { user, logout, isAuthenticated, isAdmin } = useAuth();
@@ -16,6 +16,10 @@ const Navbar: React.FC = () => {
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  const goToAdminPanel = () => {
+    navigate('/admin');
   };
 
   return (
@@ -38,15 +42,18 @@ const Navbar: React.FC = () => {
                 </div>
                 
                 {isAdmin && (
-                  <Link to="/admin">
-                    <Button variant="ghost" className="text-white hover:text-vote-accent">
-                      Admin Panel
-                    </Button>
-                  </Link>
+                  <Button 
+                    variant="secondary" 
+                    className="flex items-center gap-1"
+                    onClick={goToAdminPanel}
+                  >
+                    <LayoutDashboard className="h-4 w-4" />
+                    Admin Panel
+                  </Button>
                 )}
                 
                 {/* Only show Cast Vote button if not on the admin page */}
-                {!isAdminPage && (
+                {!isAdminPage && !isAdmin && (
                   <Link to="/vote">
                     <Button variant="ghost" className="text-white hover:text-vote-accent">
                       Cast Vote

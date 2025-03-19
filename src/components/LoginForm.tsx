@@ -11,7 +11,7 @@ const LoginForm: React.FC = () => {
   const { isAdmin } = useAuth();
 
   const handleLoginSuccess = () => {
-    // If user is admin, navigate to admin panel instead of vote page
+    // If user is admin, navigate to admin panel instead of home page
     if (isAdmin) {
       navigate('/admin');
     } else {
