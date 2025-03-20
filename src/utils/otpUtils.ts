@@ -29,6 +29,11 @@ export const formatPhoneNumber = (phone: string): string => {
   return phone;
 };
 
+// Check if we're in development mode
+export const isDevelopmentMode = (): boolean => {
+  return process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost';
+};
+
 // Simple encryption for user data (for demonstration purposes)
 export const encryptUserData = (userData: object): string => {
   try {

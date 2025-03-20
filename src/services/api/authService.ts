@@ -1,5 +1,4 @@
-
-import { generateOTP } from '@/utils/otpUtils';
+import { generateOTP, isDevelopmentMode } from '@/utils/otpUtils';
 import { 
   LoginResponse, 
   OtpResponse, 
@@ -35,7 +34,10 @@ export async function requestOTP(phone: string): Promise<OtpResponse> {
     expiresAt: Date.now() + 5 * 60 * 1000
   };
   
-  console.log(`[DEV MODE] Generated OTP for ${phone}: ${otp}`);
+  // Only log in development mode
+  if (isDevelopmentMode()) {
+    console.log(`[DEV MODE] Generated OTP for ${phone}: ${otp}`);
+  }
   
   return {
     success: true,
@@ -43,7 +45,7 @@ export async function requestOTP(phone: string): Promise<OtpResponse> {
       ? "OTP sent successfully to your phone" 
       : "OTP sent. Note: This number is not registered yet",
     // Only include OTP in response for development
-    otp: process.env.NODE_ENV === 'development' ? otp : undefined
+    otp: isDevelopmentMode() ? otp : undefined
   };
 }
 

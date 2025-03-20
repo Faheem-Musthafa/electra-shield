@@ -7,8 +7,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CardFooter } from '@/components/ui/card';
 import { Key, Smartphone } from 'lucide-react';
-import { formatPhoneNumber } from '@/utils/otpUtils';
+import { formatPhoneNumber, isDevelopmentMode } from '@/utils/otpUtils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { 
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot
+} from '@/components/ui/input-otp';
 
 interface OTPLoginFormProps {
   onLoginSuccess: () => void;
@@ -124,9 +129,11 @@ const OTPLoginForm: React.FC<OTPLoginFormProps> = ({ onLoginSuccess }) => {
                   />
                   <Key className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  For demo, use phone: 1234567890 (admin) or 9876543210 (voter)
-                </p>
+                {isDevelopmentMode() && (
+                  <p className="text-xs text-muted-foreground">
+                    For demo, use phone: 1234567890 (admin) or 9876543210 (voter)
+                  </p>
+                )}
               </div>
             </>
           )}
