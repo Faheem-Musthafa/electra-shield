@@ -4,10 +4,11 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useVote } from '@/contexts/VoteContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Upload, Check, AlertCircle, Plus, Users, User } from 'lucide-react';
+import { Upload, Check, AlertCircle, Plus, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { useForm } from 'react-hook-form';
@@ -30,6 +31,7 @@ const AdminPanel: React.FC = () => {
   const [totalVotes, setTotalVotes] = useState(0);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle');
   const [showCandidateForm, setShowCandidateForm] = useState(false);
+  const [showCandidateList, setShowCandidateList] = useState(false);
   
   // Initialize form
   const form = useForm<CandidateFormValues>({
@@ -167,24 +169,34 @@ const AdminPanel: React.FC = () => {
         </CardContent>
       </Card>
       
-      {/* Candidate Vote Counts */}
+      {/* Vote Tallies Section */}
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
             <div>
-              <CardTitle>Candidate Vote Counts</CardTitle>
+              <CardTitle>Live Vote Tallies</CardTitle>
               <CardDescription>
-                Vote counts by candidate
+                Current vote counts: {totalVotes} total votes
               </CardDescription>
             </div>
-            <Button 
-              variant="outline" 
-              className="flex items-center gap-2"
-              onClick={() => setShowCandidateForm(!showCandidateForm)}
-            >
-              <Plus className="h-4 w-4" />
-              Add Candidate
-            </Button>
+            <div className="space-x-2">
+              <Button 
+                variant="outline" 
+                className="flex items-center gap-2"
+                onClick={() => setShowCandidateList(!showCandidateList)}
+              >
+                <Users className="h-4 w-4" />
+                {showCandidateList ? "Hide Candidates" : "View Candidates"}
+              </Button>
+              <Button 
+                variant="outline" 
+                className="flex items-center gap-2"
+                onClick={() => setShowCandidateForm(!showCandidateForm)}
+              >
+                <Plus className="h-4 w-4" />
+                Add Candidate
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -193,53 +205,92 @@ const AdminPanel: React.FC = () => {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-vote-secondary"></div>
             </div>
           ) : (
+            <div className="space-y-6">
+              {candidates.map((candidate) => {
+                const voteCount = results[candidate.id] || 0;
+                const percentage = totalVotes > 0 
+                  ? Math.round((voteCount / totalVotes) * 100) 
+                  : 0;
+                
+                return (
+                  <div key={candidate.id} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <img
+                          src={candidate.image}
+                          alt={candidate.name}
+                          className="h-8 w-8 rounded-full mr-3 bg-gray-200"
+                        />
+                        <div>
+                          <h4 className="font-medium">{candidate.name}</h4>
+                          <p className="text-sm text-muted-foreground">{candidate.party}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className="font-bold">{voteCount}</span>
+                        <span className="text-sm text-muted-foreground ml-1">
+                          ({percentage}%)
+                        </span>
+                      </div>
+                    </div>
+                    <Progress value={percentage} className="h-2" />
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      
+      {/* Candidate List */}
+      {showCandidateList && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Candidate List</CardTitle>
+            <CardDescription>
+              All registered candidates in the system
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Candidate</TableHead>
+                  <TableHead>ID</TableHead>
+                  <TableHead>Photo</TableHead>
+                  <TableHead>Name</TableHead>
                   <TableHead>Party</TableHead>
                   <TableHead className="text-right">Votes</TableHead>
-                  <TableHead className="text-right">Percentage</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {candidates.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
+                    <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
                       No candidates registered yet
                     </TableCell>
                   </TableRow>
                 ) : (
-                  candidates.map((candidate) => {
-                    const voteCount = results[candidate.id] || 0;
-                    const percentage = totalVotes > 0 
-                      ? Math.round((voteCount / totalVotes) * 100) 
-                      : 0;
-                    
-                    return (
-                      <TableRow key={candidate.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <img
-                              src={candidate.image}
-                              alt={candidate.name}
-                              className="h-8 w-8 rounded-full bg-gray-200"
-                            />
-                            <span>{candidate.name}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>{candidate.party}</TableCell>
-                        <TableCell className="text-right font-medium">{voteCount}</TableCell>
-                        <TableCell className="text-right">{percentage}%</TableCell>
-                      </TableRow>
-                    );
-                  })
+                  candidates.map((candidate) => (
+                    <TableRow key={candidate.id}>
+                      <TableCell className="font-mono text-xs">{candidate.id}</TableCell>
+                      <TableCell>
+                        <img
+                          src={candidate.image}
+                          alt={candidate.name}
+                          className="h-8 w-8 rounded-full bg-gray-200"
+                        />
+                      </TableCell>
+                      <TableCell>{candidate.name}</TableCell>
+                      <TableCell>{candidate.party}</TableCell>
+                      <TableCell className="text-right font-medium">{results[candidate.id] || 0}</TableCell>
+                    </TableRow>
+                  ))
                 )}
               </TableBody>
             </Table>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
       
       {/* Add Candidate Form */}
       {showCandidateForm && (
