@@ -8,12 +8,13 @@ import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Upload, Check, AlertCircle, Plus } from 'lucide-react';
+import { Upload, Check, AlertCircle, Plus, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 // Define schema for adding a candidate
 const candidateSchema = z.object({
@@ -30,6 +31,7 @@ const AdminPanel: React.FC = () => {
   const [totalVotes, setTotalVotes] = useState(0);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle');
   const [showCandidateForm, setShowCandidateForm] = useState(false);
+  const [showCandidateList, setShowCandidateList] = useState(false);
   
   // Initialize form
   const form = useForm<CandidateFormValues>({
@@ -44,6 +46,13 @@ const AdminPanel: React.FC = () => {
   useEffect(() => {
     if (isAdmin) {
       loadResults();
+      
+      // Set up an interval to refresh the results every 10 seconds
+      const interval = setInterval(() => {
+        loadResults();
+      }, 10000);
+      
+      return () => clearInterval(interval);
     }
   }, [isAdmin, loadResults]);
   
@@ -87,6 +96,8 @@ const AdminPanel: React.FC = () => {
       if (success) {
         setShowCandidateForm(false);
         form.reset();
+        // Refresh results to include the new candidate
+        await loadResults();
       }
     } catch (error) {
       console.error('Error adding candidate:', error);
@@ -142,7 +153,23 @@ const AdminPanel: React.FC = () => {
         </div>
       </div>
       
-      {/* Vote Counting Section */}
+      {/* Vote Counter Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Vote Counter
+          </CardTitle>
+          <CardDescription>
+            Total votes cast: {totalVotes}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="text-4xl font-bold text-center py-4">{totalVotes}</div>
+        </CardContent>
+      </Card>
+      
+      {/* Vote Tallies Section */}
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
@@ -152,14 +179,24 @@ const AdminPanel: React.FC = () => {
                 Current vote counts: {totalVotes} total votes
               </CardDescription>
             </div>
-            <Button 
-              variant="outline" 
-              className="flex items-center gap-2"
-              onClick={() => setShowCandidateForm(!showCandidateForm)}
-            >
-              <Plus className="h-4 w-4" />
-              Add Candidate
-            </Button>
+            <div className="space-x-2">
+              <Button 
+                variant="outline" 
+                className="flex items-center gap-2"
+                onClick={() => setShowCandidateList(!showCandidateList)}
+              >
+                <Users className="h-4 w-4" />
+                {showCandidateList ? "Hide Candidates" : "View Candidates"}
+              </Button>
+              <Button 
+                variant="outline" 
+                className="flex items-center gap-2"
+                onClick={() => setShowCandidateForm(!showCandidateForm)}
+              >
+                <Plus className="h-4 w-4" />
+                Add Candidate
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -204,6 +241,56 @@ const AdminPanel: React.FC = () => {
           )}
         </CardContent>
       </Card>
+      
+      {/* Candidate List */}
+      {showCandidateList && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Candidate List</CardTitle>
+            <CardDescription>
+              All registered candidates in the system
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>ID</TableHead>
+                  <TableHead>Photo</TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Party</TableHead>
+                  <TableHead className="text-right">Votes</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {candidates.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
+                      No candidates registered yet
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  candidates.map((candidate) => (
+                    <TableRow key={candidate.id}>
+                      <TableCell className="font-mono text-xs">{candidate.id}</TableCell>
+                      <TableCell>
+                        <img
+                          src={candidate.image}
+                          alt={candidate.name}
+                          className="h-8 w-8 rounded-full bg-gray-200"
+                        />
+                      </TableCell>
+                      <TableCell>{candidate.name}</TableCell>
+                      <TableCell>{candidate.party}</TableCell>
+                      <TableCell className="text-right font-medium">{results[candidate.id] || 0}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
       
       {/* Add Candidate Form */}
       {showCandidateForm && (
