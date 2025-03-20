@@ -9,10 +9,12 @@ import { CardFooter } from '@/components/ui/card';
 import { Key, Smartphone } from 'lucide-react';
 import { formatPhoneNumber, isDevelopmentMode } from '@/utils/otpUtils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { 
   InputOTP,
   InputOTPGroup,
-  InputOTPSlot
+  InputOTPSlot,
+  InputOTPSeparator
 } from '@/components/ui/input-otp';
 
 interface OTPLoginFormProps {
@@ -26,6 +28,7 @@ const OTPLoginForm: React.FC<OTPLoginFormProps> = ({ onLoginSuccess }) => {
   const [otpSent, setOtpSent] = useState(false);
   const [resendDisabled, setResendDisabled] = useState(false);
   const [countdown, setCountdown] = useState(0);
+  const isMobile = useIsMobile();
 
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,21 +76,29 @@ const OTPLoginForm: React.FC<OTPLoginFormProps> = ({ onLoginSuccess }) => {
     }
   };
 
+  const handleOtpChange = (value: string) => {
+    setOtp(value);
+  };
+
   return (
     <>
       <form onSubmit={otpSent ? handleLogin : handleSendOtp}>
         <div className="grid gap-4">
           <div className="space-y-2">
             <Label htmlFor="phone">Phone Number</Label>
-            <Input
-              id="phone"
-              type="tel"
-              placeholder="Enter your phone number"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').substring(0, 10))}
-              required
-              disabled={otpSent && isLoading}
-            />
+            <div className="relative">
+              <Input
+                id="phone"
+                type="tel"
+                placeholder="Enter your phone number"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').substring(0, 10))}
+                required
+                disabled={otpSent && isLoading}
+                className="pl-10"
+              />
+              <Smartphone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            </div>
           </div>
           
           {otpSent && (
@@ -115,22 +126,27 @@ const OTPLoginForm: React.FC<OTPLoginFormProps> = ({ onLoginSuccess }) => {
                       : 'Resend OTP'}
                   </Button>
                 </div>
-                <div className="relative">
-                  <Input
-                    id="otp"
-                    type="text"
-                    placeholder="Enter 6-digit OTP"
-                    value={otp}
-                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').substring(0, 6))}
-                    required
-                    className="pr-10"
-                    maxLength={6}
-                    autoFocus
-                  />
-                  <Key className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                </div>
+                
+                <InputOTP
+                  maxLength={6}
+                  value={otp}
+                  onChange={handleOtpChange}
+                  className="w-full justify-center gap-2"
+                  containerClassName="justify-center"
+                >
+                  <InputOTPGroup>
+                    <InputOTPSlot index={0} />
+                    <InputOTPSlot index={1} />
+                    <InputOTPSlot index={2} />
+                    <InputOTPSeparator />
+                    <InputOTPSlot index={3} />
+                    <InputOTPSlot index={4} />
+                    <InputOTPSlot index={5} />
+                  </InputOTPGroup>
+                </InputOTP>
+                
                 {isDevelopmentMode() && (
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground mt-2">
                     For demo, use phone: 1234567890 (admin) or 9876543210 (voter)
                   </p>
                 )}
