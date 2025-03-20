@@ -88,10 +88,11 @@ export const VoteProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Get vote counts from the service
       const voteCounts = await apiService.getVoteCounts();
       setResults(voteCounts);
-      setIsLoadingResults(false);
     } catch (error) {
       console.error('Error loading results:', error);
       toast.error('Failed to load results');
+    } finally {
+      // Make sure we always set loading to false, even if there's an error
       setIsLoadingResults(false);
     }
   };
@@ -107,15 +108,16 @@ export const VoteProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Get latest vote counts
       await loadResults();
       setLastSyncTime(new Date());
-      setIsLoadingResults(false);
       
       toast.success('Votes synchronized successfully');
       return true;
     } catch (error) {
       console.error('Error syncing votes:', error);
       toast.error('Failed to sync votes');
-      setIsLoadingResults(false);
       return false;
+    } finally {
+      // Make sure we always set loading to false, even if there's an error
+      setIsLoadingResults(false);
     }
   };
 

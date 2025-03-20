@@ -115,9 +115,12 @@ export async function getVoteCounts(): Promise<{ [key: string]: number }> {
     const votes = loadVotes();
     const counts: { [key: string]: number } = {};
     
+    // Make sure all candidates have an entry, even if they have 0 votes
     Object.keys(votes).forEach(candidateId => {
       counts[candidateId] = votes[candidateId].length;
     });
+    
+    console.log("[DEV MODE] Retrieved vote counts:", counts);
     
     return counts;
   } catch (error) {
