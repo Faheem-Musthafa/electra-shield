@@ -16,6 +16,8 @@ import {
   InputOTPSlot,
   InputOTPSeparator
 } from '@/components/ui/input-otp';
+import { FaceCapture } from '@/components/ui/face-capture';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface OTPLoginFormProps {
   onLoginSuccess: () => void;
@@ -28,6 +30,8 @@ const OTPLoginForm: React.FC<OTPLoginFormProps> = ({ onLoginSuccess }) => {
   const [otpSent, setOtpSent] = useState(false);
   const [resendDisabled, setResendDisabled] = useState(false);
   const [countdown, setCountdown] = useState(0);
+  const [faceImage, setFaceImage] = useState('');
+  const [activeTab, setActiveTab] = useState('otp');
   const isMobile = useIsMobile();
 
   const handleSendOtp = async (e: React.FormEvent) => {
@@ -70,6 +74,11 @@ const OTPLoginForm: React.FC<OTPLoginFormProps> = ({ onLoginSuccess }) => {
       return;
     }
     
+    if (activeTab === 'face' && !faceImage) {
+      toast.error('Please capture your face image');
+      return;
+    }
+    
     const success = await login(phone, otp);
     if (success) {
       onLoginSuccess();
@@ -80,36 +89,134 @@ const OTPLoginForm: React.FC<OTPLoginFormProps> = ({ onLoginSuccess }) => {
     setOtp(value);
   };
 
+  const handleFaceCapture = (imageSrc: string) => {
+    setFaceImage(imageSrc);
+  };
+
   return (
     <>
-      <form onSubmit={otpSent ? handleLogin : handleSendOtp}>
-        <div className="grid gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="phone">Phone Number</Label>
-            <div className="relative">
-              <Input
-                id="phone"
-                type="tel"
-                placeholder="Enter your phone number"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').substring(0, 10))}
-                required
-                disabled={otpSent && isLoading}
-                className="pl-10"
-              />
-              <Smartphone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            </div>
-          </div>
-          
-          {otpSent && (
-            <>
-              <Alert className="bg-muted">
-                <AlertTitle className="text-sm font-medium">OTP Sent</AlertTitle>
-                <AlertDescription className="text-xs">
-                  A verification code has been sent to {formatPhoneNumber(phone)}
-                </AlertDescription>
-              </Alert>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-2 mb-6">
+          <TabsTrigger value="otp">OTP Verification</TabsTrigger>
+          <TabsTrigger value="face">Face Verification</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="otp" className="space-y-4">
+          <form onSubmit={otpSent ? handleLogin : handleSendOtp}>
+            <div className="grid gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone Number</Label>
+                <div className="relative">
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="Enter your phone number"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').substring(0, 10))}
+                    required
+                    disabled={otpSent && isLoading}
+                    className="pl-10"
+                  />
+                  <Smartphone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                </div>
+              </div>
               
+              {otpSent && (
+                <>
+                  <Alert className="bg-muted">
+                    <AlertTitle className="text-sm font-medium">OTP Sent</AlertTitle>
+                    <AlertDescription className="text-xs">
+                      A verification code has been sent to {formatPhoneNumber(phone)}
+                    </AlertDescription>
+                  </Alert>
+                  
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <Label htmlFor="otp">OTP Code</Label>
+                      <Button 
+                        type="button" 
+                        variant="link" 
+                        size="sm"
+                        className="text-xs p-0 h-auto"
+                        disabled={resendDisabled}
+                        onClick={handleResendOtp}
+                      >
+                        {resendDisabled 
+                          ? `Resend in ${countdown}s` 
+                          : 'Resend OTP'}
+                      </Button>
+                    </div>
+                    
+                    <InputOTP
+                      maxLength={6}
+                      value={otp}
+                      onChange={handleOtpChange}
+                      className="w-full"
+                      containerClassName={isMobile ? "justify-center gap-1" : "justify-center gap-2"}
+                    >
+                      <InputOTPGroup>
+                        <InputOTPSlot index={0} />
+                        <InputOTPSlot index={1} />
+                        <InputOTPSlot index={2} />
+                        {isMobile ? null : <InputOTPSeparator />}
+                        <InputOTPSlot index={3} />
+                        <InputOTPSlot index={4} />
+                        <InputOTPSlot index={5} />
+                      </InputOTPGroup>
+                    </InputOTP>
+                    
+                    {isDevelopmentMode() && (
+                      <p className="text-xs text-muted-foreground mt-2">
+                        For demo, use phone: 1234567890 (admin) or 9876543210 (voter)
+                      </p>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+            
+            <CardFooter className="flex justify-center pt-6 pb-0 px-0">
+              <Button 
+                type="submit" 
+                className="w-full bg-vote-secondary hover:bg-vote-primary"
+                disabled={isLoading}
+              >
+                {isLoading 
+                  ? 'Processing...' 
+                  : otpSent 
+                    ? 'Verify & Login' 
+                    : 'Send OTP'
+                }
+              </Button>
+            </CardFooter>
+          </form>
+        </TabsContent>
+        
+        <TabsContent value="face" className="space-y-4">
+          <div className="grid gap-4">
+            <div className="space-y-2">
+              <Label>Face Verification</Label>
+              <FaceCapture onCapture={handleFaceCapture} capturedImage={faceImage} />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone Number</Label>
+              <div className="relative">
+                <Input
+                  id="phone-face"
+                  type="tel"
+                  placeholder="Enter your phone number"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').substring(0, 10))}
+                  required
+                  disabled={isLoading}
+                  className="pl-10"
+                />
+                <Smartphone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              </div>
+            </div>
+
+            {otpSent && (
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <Label htmlFor="otp">OTP Code</Label>
@@ -144,32 +251,27 @@ const OTPLoginForm: React.FC<OTPLoginFormProps> = ({ onLoginSuccess }) => {
                     <InputOTPSlot index={5} />
                   </InputOTPGroup>
                 </InputOTP>
-                
-                {isDevelopmentMode() && (
-                  <p className="text-xs text-muted-foreground mt-2">
-                    For demo, use phone: 1234567890 (admin) or 9876543210 (voter)
-                  </p>
-                )}
               </div>
-            </>
-          )}
-        </div>
-        
-        <CardFooter className="flex justify-center pt-6 pb-0 px-0">
-          <Button 
-            type="submit" 
-            className="w-full bg-vote-secondary hover:bg-vote-primary"
-            disabled={isLoading}
-          >
-            {isLoading 
-              ? 'Processing...' 
-              : otpSent 
-                ? 'Verify & Login' 
-                : 'Send OTP'
-            }
-          </Button>
-        </CardFooter>
-      </form>
+            )}
+            
+            <CardFooter className="flex justify-center pt-6 pb-0 px-0">
+              <Button 
+                type="button" 
+                className="w-full bg-vote-secondary hover:bg-vote-primary"
+                disabled={isLoading}
+                onClick={!otpSent ? handleSendOtp : handleLogin}
+              >
+                {isLoading 
+                  ? 'Processing...' 
+                  : otpSent 
+                    ? 'Verify & Login' 
+                    : 'Send OTP'
+                }
+              </Button>
+            </CardFooter>
+          </div>
+        </TabsContent>
+      </Tabs>
     </>
   );
 };
