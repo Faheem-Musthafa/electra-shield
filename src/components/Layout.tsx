@@ -18,7 +18,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       </main>
       <footer className="bg-vote-primary text-white py-4">
         <div className="container mx-auto px-4 text-center">
-          <p>© 2024 ElectraShield - Secure Electronic Voting System</p>
+          <p>© 2023 ElectraShield - Secure Electronic Voting System</p>
         </div>
       </footer>
     </div>
