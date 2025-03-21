@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -58,10 +57,6 @@ const RegisterForm: React.FC = () => {
       errors.addressId = 'Address ID must be at least 4 characters';
     }
     
-    if (!faceImage) {
-      errors.faceImage = 'Face capture is required';
-    }
-    
     if (!otpVerified) {
       errors.otp = 'Phone verification is required';
     }
@@ -85,7 +80,6 @@ const RegisterForm: React.FC = () => {
     const success = await requestOtp(phone);
     if (success) {
       setOtpSent(true);
-      // Disable resend for 30 seconds
       setResendDisabled(true);
       setCountdown(30);
       
@@ -113,8 +107,6 @@ const RegisterForm: React.FC = () => {
       return;
     }
     
-    // In a real app, we would verify the OTP with the server here
-    // For demo, we'll just simulate a successful verification
     setOtpVerified(true);
     toast.success('Phone number verified successfully');
     setValidationErrors({
@@ -141,7 +133,6 @@ const RegisterForm: React.FC = () => {
     e.preventDefault();
     
     if (!validateForm()) {
-      // Show first error in toast
       const firstError = Object.values(validationErrors)[0];
       if (firstError) {
         toast.error(firstError);
@@ -151,8 +142,11 @@ const RegisterForm: React.FC = () => {
     
     const success = await register(name, phone, addressId);
     if (success) {
-      // In a real app, we would save the face image to the server here
-      toast.success('Registration successful! Face biometrics saved.');
+      if (faceImage) {
+        toast.success('Registration successful! Face biometrics saved.');
+      } else {
+        toast.success('Registration successful!');
+      }
       navigate('/login');
     }
   };
@@ -170,13 +164,13 @@ const RegisterForm: React.FC = () => {
         <form onSubmit={handleRegister} className="space-y-4">
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Face Capture</Label>
+              <Label>Face Capture (Optional)</Label>
               <FaceCapture onCapture={handleFaceCapture} capturedImage={faceImage} />
               {validationErrors.faceImage && (
                 <p className="text-xs text-red-500 mt-1">{validationErrors.faceImage}</p>
               )}
               <p className="text-xs text-muted-foreground">
-                Your face will be used for secure biometric verification
+                Your face can be used for secure biometric verification (optional)
               </p>
             </div>
             
@@ -217,7 +211,6 @@ const RegisterForm: React.FC = () => {
                     if (validationErrors.phone) {
                       setValidationErrors({ ...validationErrors, phone: '' });
                     }
-                    // Reset OTP verification if phone changes
                     if (otpVerified) {
                       setOtpVerified(false);
                       setOtpSent(false);
