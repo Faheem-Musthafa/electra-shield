@@ -16,9 +16,15 @@ const FaceCapture: React.FC<FaceCaptureProps> = ({ onCapture, capturedImage }) =
   const [isCaptured, setIsCaptured] = useState(!!capturedImage);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const isMobile = useIsMobile();
+  const streamRef = useRef<MediaStream | null>(null);
 
   const startCamera = useCallback(async () => {
     try {
+      // Stop any existing stream before starting a new one
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+      
       setCameraError(null);
       const constraints = {
         video: { 
@@ -31,9 +37,14 @@ const FaceCapture: React.FC<FaceCaptureProps> = ({ onCapture, capturedImage }) =
       
       console.log("Attempting to access camera with constraints:", constraints);
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      streamRef.current = stream;
       
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        setIsStreaming(true);
+        setIsCaptured(false);
+        
+        // Play the video after metadata is loaded
         videoRef.current.onloadedmetadata = () => {
           if (videoRef.current) {
             videoRef.current.play().catch(e => {
@@ -42,8 +53,7 @@ const FaceCapture: React.FC<FaceCaptureProps> = ({ onCapture, capturedImage }) =
             });
           }
         };
-        setIsStreaming(true);
-        setIsCaptured(false);
+        
         console.log("Camera started successfully");
       }
     } catch (error) {
@@ -56,20 +66,27 @@ const FaceCapture: React.FC<FaceCaptureProps> = ({ onCapture, capturedImage }) =
           errorMsg = "No camera found on this device.";
         } else if (error.name === "NotReadableError") {
           errorMsg = "Camera is already in use by another application.";
+        } else if (error.name === "AbortError" || error.name === "SecurityError") {
+          errorMsg = "Camera access was blocked by browser security settings.";
         }
       }
       setCameraError(errorMsg);
+      setIsStreaming(false);
     }
   }, [isMobile]);
 
   const stopCamera = useCallback(() => {
-    if (videoRef.current && videoRef.current.srcObject) {
-      const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
-      tracks.forEach(track => track.stop());
-      videoRef.current.srcObject = null;
-      setIsStreaming(false);
-      console.log("Camera stopped");
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
     }
+    
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    
+    setIsStreaming(false);
+    console.log("Camera stopped");
   }, []);
 
   const captureImage = useCallback(() => {
@@ -107,19 +124,32 @@ const FaceCapture: React.FC<FaceCaptureProps> = ({ onCapture, capturedImage }) =
 
   // Initialize camera when component mounts
   useEffect(() => {
-    if (!capturedImage) {
+    let mounted = true;
+    
+    if (!capturedImage && mounted) {
       console.log("FaceCapture component mounted, starting camera");
-      startCamera();
+      // Add a small delay before starting camera to ensure DOM is ready
+      const timer = setTimeout(() => {
+        if (mounted) {
+          startCamera();
+        }
+      }, 300);
+      
+      return () => {
+        mounted = false;
+        clearTimeout(timer);
+        stopCamera();
+        console.log("FaceCapture component unmounting, stopping camera");
+      };
     } else {
       console.log("FaceCapture mounted with existing image, not starting camera");
       setIsCaptured(true);
+      
+      return () => {
+        mounted = false;
+        console.log("FaceCapture component unmounting");
+      };
     }
-    
-    // Clean up camera when component unmounts
-    return () => {
-      console.log("FaceCapture component unmounting, stopping camera");
-      stopCamera();
-    };
   }, [capturedImage, startCamera, stopCamera]);
 
   return (
