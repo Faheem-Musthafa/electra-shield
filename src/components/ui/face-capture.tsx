@@ -1,5 +1,5 @@
 
-import React, { useRef, useState, useCallback } from "react";
+import React, { useRef, useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Camera, RefreshCw } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -14,24 +14,53 @@ const FaceCapture: React.FC<FaceCaptureProps> = ({ onCapture, capturedImage }) =
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [isCaptured, setIsCaptured] = useState(!!capturedImage);
+  const [cameraError, setCameraError] = useState<string | null>(null);
   const isMobile = useIsMobile();
 
   const startCamera = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user" },
+      setCameraError(null);
+      const constraints = {
+        video: { 
+          facingMode: "user",
+          width: { ideal: isMobile ? 640 : 1280 },
+          height: { ideal: isMobile ? 480 : 720 }
+        },
         audio: false,
-      });
+      };
+      
+      console.log("Attempting to access camera with constraints:", constraints);
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        videoRef.current.onloadedmetadata = () => {
+          if (videoRef.current) {
+            videoRef.current.play().catch(e => {
+              console.error("Error playing video:", e);
+              setCameraError("Failed to start video stream");
+            });
+          }
+        };
         setIsStreaming(true);
         setIsCaptured(false);
+        console.log("Camera started successfully");
       }
     } catch (error) {
       console.error("Error accessing camera:", error);
+      let errorMsg = "Could not access camera";
+      if (error instanceof DOMException) {
+        if (error.name === "NotAllowedError") {
+          errorMsg = "Camera access denied. Please allow camera access in your browser settings.";
+        } else if (error.name === "NotFoundError") {
+          errorMsg = "No camera found on this device.";
+        } else if (error.name === "NotReadableError") {
+          errorMsg = "Camera is already in use by another application.";
+        }
+      }
+      setCameraError(errorMsg);
     }
-  }, []);
+  }, [isMobile]);
 
   const stopCamera = useCallback(() => {
     if (videoRef.current && videoRef.current.srcObject) {
@@ -39,6 +68,7 @@ const FaceCapture: React.FC<FaceCaptureProps> = ({ onCapture, capturedImage }) =
       tracks.forEach(track => track.stop());
       videoRef.current.srcObject = null;
       setIsStreaming(false);
+      console.log("Camera stopped");
     }
   }, []);
 
@@ -75,16 +105,19 @@ const FaceCapture: React.FC<FaceCaptureProps> = ({ onCapture, capturedImage }) =
     startCamera();
   }, [onCapture, startCamera]);
 
-  // Start camera when component mounts if no image is already captured
-  React.useEffect(() => {
+  // Initialize camera when component mounts
+  useEffect(() => {
     if (!capturedImage) {
+      console.log("FaceCapture component mounted, starting camera");
       startCamera();
     } else {
+      console.log("FaceCapture mounted with existing image, not starting camera");
       setIsCaptured(true);
     }
     
     // Clean up camera when component unmounts
     return () => {
+      console.log("FaceCapture component unmounting, stopping camera");
       stopCamera();
     };
   }, [capturedImage, startCamera, stopCamera]);
@@ -135,11 +168,21 @@ const FaceCapture: React.FC<FaceCaptureProps> = ({ onCapture, capturedImage }) =
             </div>
           </>
         ) : (
-          <div className="flex h-full w-full items-center justify-center bg-muted">
-            <Button onClick={startCamera}>
-              <Camera className="h-4 w-4 mr-2" />
-              Start Camera
-            </Button>
+          <div className="flex h-full w-full flex-col items-center justify-center bg-muted p-4">
+            {cameraError ? (
+              <>
+                <p className="text-center text-red-500 mb-4">{cameraError}</p>
+                <Button onClick={startCamera}>
+                  <Camera className="h-4 w-4 mr-2" />
+                  Retry Camera
+                </Button>
+              </>
+            ) : (
+              <Button onClick={startCamera}>
+                <Camera className="h-4 w-4 mr-2" />
+                Start Camera
+              </Button>
+            )}
           </div>
         )}
       </div>
