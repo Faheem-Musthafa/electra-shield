@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -34,17 +34,6 @@ const OTPLoginForm: React.FC<OTPLoginFormProps> = ({ onLoginSuccess }) => {
   const [activeTab, setActiveTab] = useState('otp');
   const isMobile = useIsMobile();
 
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Clear timer when component unmounts
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-    };
-  }, []);
-
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!phone || phone.length < 10) {
@@ -59,18 +48,10 @@ const OTPLoginForm: React.FC<OTPLoginFormProps> = ({ onLoginSuccess }) => {
       setResendDisabled(true);
       setCountdown(30);
       
-      // Clear any existing timer
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-      
-      timerRef.current = setInterval(() => {
+      const timer = setInterval(() => {
         setCountdown(prev => {
           if (prev <= 1) {
-            if (timerRef.current) {
-              clearInterval(timerRef.current);
-              timerRef.current = null;
-            }
+            clearInterval(timer);
             setResendDisabled(false);
             return 0;
           }
@@ -100,11 +81,6 @@ const OTPLoginForm: React.FC<OTPLoginFormProps> = ({ onLoginSuccess }) => {
     
     const success = await login(phone, otp);
     if (success) {
-      // Clear any existing timer before navigating away
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
       onLoginSuccess();
     }
   };
@@ -217,7 +193,7 @@ const OTPLoginForm: React.FC<OTPLoginFormProps> = ({ onLoginSuccess }) => {
         </TabsContent>
         
         <TabsContent value="face" className="space-y-4">
-          <form onSubmit={handleLogin} className="grid gap-4">
+          <div className="grid gap-4">
             <div className="space-y-2">
               <Label>Face Verification</Label>
               <FaceCapture onCapture={handleFaceCapture} capturedImage={faceImage} />
@@ -280,9 +256,10 @@ const OTPLoginForm: React.FC<OTPLoginFormProps> = ({ onLoginSuccess }) => {
             
             <CardFooter className="flex justify-center pt-6 pb-0 px-0">
               <Button 
-                type="submit" 
+                type="button" 
                 className="w-full bg-vote-secondary hover:bg-vote-primary"
                 disabled={isLoading}
+                onClick={!otpSent ? handleSendOtp : handleLogin}
               >
                 {isLoading 
                   ? 'Processing...' 
@@ -292,7 +269,7 @@ const OTPLoginForm: React.FC<OTPLoginFormProps> = ({ onLoginSuccess }) => {
                 }
               </Button>
             </CardFooter>
-          </form>
+          </div>
         </TabsContent>
       </Tabs>
     </>
