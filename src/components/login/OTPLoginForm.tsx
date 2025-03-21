@@ -131,14 +131,14 @@ const OTPLoginForm: React.FC<OTPLoginFormProps> = ({ onLoginSuccess }) => {
                   maxLength={6}
                   value={otp}
                   onChange={handleOtpChange}
-                  className="w-full justify-center gap-2"
-                  containerClassName="justify-center"
+                  className="w-full"
+                  containerClassName={isMobile ? "justify-center gap-1" : "justify-center gap-2"}
                 >
                   <InputOTPGroup>
                     <InputOTPSlot index={0} />
                     <InputOTPSlot index={1} />
                     <InputOTPSlot index={2} />
-                    <InputOTPSeparator />
+                    {isMobile ? null : <InputOTPSeparator />}
                     <InputOTPSlot index={3} />
                     <InputOTPSlot index={4} />
                     <InputOTPSlot index={5} />
