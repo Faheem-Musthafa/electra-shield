@@ -41,23 +41,28 @@ const OTPLoginForm: React.FC<OTPLoginFormProps> = ({ onLoginSuccess }) => {
       return;
     }
     
-    const success = await requestOtp(phone);
-    if (success) {
-      setOtpSent(true);
-      // Disable resend for 30 seconds
-      setResendDisabled(true);
-      setCountdown(30);
-      
-      const timer = setInterval(() => {
-        setCountdown(prev => {
-          if (prev <= 1) {
-            clearInterval(timer);
-            setResendDisabled(false);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
+    try {
+      const success = await requestOtp(phone);
+      if (success) {
+        setOtpSent(true);
+        // Disable resend for 30 seconds
+        setResendDisabled(true);
+        setCountdown(30);
+        
+        const timer = setInterval(() => {
+          setCountdown(prev => {
+            if (prev <= 1) {
+              clearInterval(timer);
+              setResendDisabled(false);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      }
+    } catch (error) {
+      console.error('Error sending OTP:', error);
+      toast.error('Failed to send OTP. Please try again.');
     }
   };
 
@@ -69,8 +74,13 @@ const OTPLoginForm: React.FC<OTPLoginFormProps> = ({ onLoginSuccess }) => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!phone || !otp) {
-      toast.error('Please fill in all required fields');
+    if (!phone || phone.length < 10) {
+      toast.error('Please enter a valid phone number');
+      return;
+    }
+    
+    if (!otp || otp.length !== 6) {
+      toast.error('Please enter a valid 6-digit OTP');
       return;
     }
     
@@ -79,19 +89,44 @@ const OTPLoginForm: React.FC<OTPLoginFormProps> = ({ onLoginSuccess }) => {
       return;
     }
     
-    const success = await login(phone, otp);
-    if (success) {
-      onLoginSuccess();
+    try {
+      console.log('Attempting login with:', { phone, otp });
+      const success = await login(phone, otp);
+      
+      if (success) {
+        toast.success('Login successful!');
+        setOtp('');
+        setPhone('');
+        setOtpSent(false);
+        onLoginSuccess();
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      toast.error('Login failed. Please check your OTP and try again.');
     }
   };
 
   const handleOtpChange = (value: string) => {
     setOtp(value);
+    console.log('OTP entered:', value);
   };
 
   const handleFaceCapture = (imageSrc: string) => {
     setFaceImage(imageSrc);
+    console.log('Face image captured');
   };
+
+  // Auto-submit when OTP is fully entered
+  React.useEffect(() => {
+    if (otp.length === 6 && otpSent) {
+      // Small delay to allow user to see the last digit they entered
+      const timer = setTimeout(() => {
+        handleLogin({ preventDefault: () => {} } as React.FormEvent);
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [otp]);
 
   return (
     <>
@@ -119,6 +154,11 @@ const OTPLoginForm: React.FC<OTPLoginFormProps> = ({ onLoginSuccess }) => {
                   />
                   <Smartphone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 </div>
+                {isDevelopmentMode() && !otpSent && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    For demo, use phone: 1234567890 (admin) or 9876543210 (voter)
+                  </p>
+                )}
               </div>
               
               {otpSent && (
@@ -167,7 +207,7 @@ const OTPLoginForm: React.FC<OTPLoginFormProps> = ({ onLoginSuccess }) => {
                     
                     {isDevelopmentMode() && (
                       <p className="text-xs text-muted-foreground mt-2">
-                        For demo, use phone: 1234567890 (admin) or 9876543210 (voter)
+                        For demo, use any 6-digit code (e.g., 123456)
                       </p>
                     )}
                   </div>
@@ -179,7 +219,7 @@ const OTPLoginForm: React.FC<OTPLoginFormProps> = ({ onLoginSuccess }) => {
               <Button 
                 type="submit" 
                 className="w-full bg-vote-secondary hover:bg-vote-primary"
-                disabled={isLoading}
+                disabled={isLoading || (otpSent && otp.length !== 6)}
               >
                 {isLoading 
                   ? 'Processing...' 
@@ -214,9 +254,14 @@ const OTPLoginForm: React.FC<OTPLoginFormProps> = ({ onLoginSuccess }) => {
                 />
                 <Smartphone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               </div>
+              {isDevelopmentMode() && !otpSent && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  For demo, use phone: 1234567890 (admin) or 9876543210 (voter)
+                </p>
+              )}
             </div>
 
-            {otpSent && (
+            {otpSent ? (
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <Label htmlFor="otp">OTP Code</Label>
@@ -251,24 +296,39 @@ const OTPLoginForm: React.FC<OTPLoginFormProps> = ({ onLoginSuccess }) => {
                     <InputOTPSlot index={5} />
                   </InputOTPGroup>
                 </InputOTP>
+                
+                {isDevelopmentMode() && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    For demo, use any 6-digit code (e.g., 123456)
+                  </p>
+                )}
               </div>
-            )}
-            
-            <CardFooter className="flex justify-center pt-6 pb-0 px-0">
+            ) : (
               <Button 
                 type="button" 
-                className="w-full bg-vote-secondary hover:bg-vote-primary"
-                disabled={isLoading}
-                onClick={!otpSent ? handleSendOtp : handleLogin}
+                className="w-full"
+                onClick={handleSendOtp}
+                disabled={!phone || phone.length !== 10}
               >
-                {isLoading 
-                  ? 'Processing...' 
-                  : otpSent 
-                    ? 'Verify & Login' 
-                    : 'Send OTP'
-                }
+                Send OTP
               </Button>
-            </CardFooter>
+            )}
+            
+            {otpSent && (
+              <CardFooter className="flex justify-center pt-3 pb-0 px-0">
+                <Button 
+                  type="button" 
+                  className="w-full bg-vote-secondary hover:bg-vote-primary"
+                  disabled={isLoading || otp.length !== 6 || !faceImage}
+                  onClick={handleLogin}
+                >
+                  {isLoading 
+                    ? 'Processing...' 
+                    : 'Verify & Login'
+                  }
+                </Button>
+              </CardFooter>
+            )}
           </div>
         </TabsContent>
       </Tabs>
