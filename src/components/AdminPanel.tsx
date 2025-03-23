@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useVote } from '@/contexts/VoteContext';
@@ -43,48 +43,67 @@ const AdminPanel: React.FC = () => {
     }
   });
   
-  useEffect(() => {
+  // Memoize the loadResults function to prevent unnecessary re-renders
+  const memoizedLoadResults = useCallback(() => {
     if (isAdmin) {
       loadResults();
-      
-      // Set up an interval to refresh the results every 10 seconds
-      const interval = setInterval(() => {
-        loadResults();
-      }, 10000);
-      
-      return () => clearInterval(interval);
     }
   }, [isAdmin, loadResults]);
   
   useEffect(() => {
-    // Calculate total votes
-    const total = Object.values(results).reduce((sum, count) => sum + count, 0);
-    setTotalVotes(total);
-  }, [results]);
+    // Initial load
+    memoizedLoadResults();
+    
+    // Set up an interval to refresh the results every 30 seconds (increased from 10 seconds)
+    // This reduces the frequency of re-renders and API calls
+    const interval = setInterval(() => {
+      memoizedLoadResults();
+    }, 30000);
+    
+    return () => clearInterval(interval);
+  }, [isAdmin, loadResults]); // Use the original dependencies instead of the memoized function
   
-  const handleSyncVotes = async () => {
+  // Memoize the total votes calculation and update state in a single useMemo
+  // This prevents an extra render cycle caused by the separate useEffect
+  useMemo(() => {
+    const newTotalVotes = Object.values(results).reduce((sum, count) => sum + count, 0);
+    if (newTotalVotes !== totalVotes) {
+      setTotalVotes(newTotalVotes);
+    }
+  }, [results, totalVotes]);
+  
+  // Memoize the handleSyncVotes function to prevent unnecessary re-renders
+  const handleSyncVotes = useCallback(async () => {
+    // Prevent multiple clicks while syncing
+    if (syncStatus === 'syncing') return;
+    
     setSyncStatus('syncing');
+    let newStatus: 'success' | 'error' = 'error';
+    
     try {
       const success = await syncVotes();
       if (success) {
-        setSyncStatus('success');
-        // Reset success status after 3 seconds
-        setTimeout(() => setSyncStatus('idle'), 3000);
+        newStatus = 'success';
       } else {
-        setSyncStatus('error');
-        // Reset error status after 3 seconds
-        setTimeout(() => setSyncStatus('idle'), 3000);
+        toast.error('Failed to sync votes');
       }
     } catch (error) {
       console.error('Error during sync:', error);
-      setSyncStatus('error');
       toast.error('An unexpected error occurred during synchronization');
-      // Reset error status after 3 seconds
-      setTimeout(() => setSyncStatus('idle'), 3000);
+    } finally {
+      // Set the final status
+      setSyncStatus(newStatus);
+      
+      // Use a single timeout to reset status
+      const timer = setTimeout(() => setSyncStatus('idle'), 3000);
+      
+      // Clean up timeout if component unmounts
+      return () => clearTimeout(timer);
     }
-  };
+  }, [syncVotes, syncStatus]); // Add syncStatus as dependency to prevent multiple calls
 
-  const onSubmitCandidate = async (data: CandidateFormValues) => {
+  // Memoize the onSubmitCandidate function to prevent unnecessary re-renders
+  const onSubmitCandidate = useCallback(async (data: CandidateFormValues) => {
     try {
       const success = await addCandidate({
         id: Date.now().toString(), // Generate a simple ID
@@ -103,7 +122,7 @@ const AdminPanel: React.FC = () => {
       console.error('Error adding candidate:', error);
       toast.error('Failed to add candidate');
     }
-  };
+  }, [addCandidate, loadResults, setShowCandidateForm, form]); // Only recreate when dependencies change
   
   // Redirect non-admin users
   if (!isAdmin) {
@@ -183,7 +202,7 @@ const AdminPanel: React.FC = () => {
               <Button 
                 variant="outline" 
                 className="flex items-center gap-2"
-                onClick={() => setShowCandidateList(!showCandidateList)}
+                onClick={useCallback(() => setShowCandidateList(prev => !prev), [])}
               >
                 <Users className="h-4 w-4" />
                 {showCandidateList ? "Hide Candidates" : "View Candidates"}
@@ -191,7 +210,7 @@ const AdminPanel: React.FC = () => {
               <Button 
                 variant="outline" 
                 className="flex items-center gap-2"
-                onClick={() => setShowCandidateForm(!showCandidateForm)}
+                onClick={useCallback(() => setShowCandidateForm(prev => !prev), [])}
               >
                 <Plus className="h-4 w-4" />
                 Add Candidate
