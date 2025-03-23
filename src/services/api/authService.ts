@@ -52,7 +52,7 @@ export async function requestOTP(phone: string): Promise<OtpResponse> {
 /**
  * Verify OTP and login user
  */
-export async function verifyOTPAndLogin(phone: string, otp: string): Promise<LoginResponse> {
+export async function verifyOTPAndLogin(phone: string, otp: string, password?: string): Promise<LoginResponse> {
   // Simulate API call delay
   await delay(1000);
   
@@ -90,6 +90,14 @@ export async function verifyOTPAndLogin(phone: string, otp: string): Promise<Log
     return {
       success: false,
       message: "Phone number not registered"
+    };
+  }
+  
+  // If password is provided, verify it
+  if (password && user.password && user.password !== password) {
+    return {
+      success: false,
+      message: "Invalid password. Please try again"
     };
   }
   

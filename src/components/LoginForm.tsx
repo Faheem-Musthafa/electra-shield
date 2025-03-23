@@ -1,17 +1,14 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import OTPLoginForm from './login/OTPLoginForm';
-import EmailLoginForm from './login/EmailLoginForm';
 import LoginFooter from './login/LoginFooter';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const LoginForm: React.FC = () => {
   const navigate = useNavigate();
   const { isAdmin } = useAuth();
-  const [activeTab, setActiveTab] = useState('email');
 
   const handleLoginSuccess = () => {
     // Redirect admin users to admin panel, regular users to index page
@@ -32,20 +29,7 @@ const LoginForm: React.FC = () => {
       </CardHeader>
       
       <CardContent className="pt-6">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-6">
-            <TabsTrigger value="email">Email & Password</TabsTrigger>
-            <TabsTrigger value="otp">OTP Verification</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="email" className="space-y-4">
-            <EmailLoginForm onLoginSuccess={handleLoginSuccess} />
-          </TabsContent>
-          
-          <TabsContent value="otp" className="space-y-4">
-            <OTPLoginForm onLoginSuccess={handleLoginSuccess} />
-          </TabsContent>
-        </Tabs>
+        <OTPLoginForm onLoginSuccess={handleLoginSuccess} />
       </CardContent>
       
       <LoginFooter />

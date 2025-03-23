@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CardFooter } from '@/components/ui/card';
-import { Key, Smartphone } from 'lucide-react';
+import { Key, Smartphone, Lock } from 'lucide-react';
 import { formatPhoneNumber, isDevelopmentMode } from '@/utils/otpUtils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -26,6 +26,7 @@ interface OTPLoginFormProps {
 const OTPLoginForm: React.FC<OTPLoginFormProps> = ({ onLoginSuccess }) => {
   const { login, requestOtp, isLoading } = useAuth();
   const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
   const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [resendDisabled, setResendDisabled] = useState(false);
@@ -79,6 +80,11 @@ const OTPLoginForm: React.FC<OTPLoginFormProps> = ({ onLoginSuccess }) => {
       return;
     }
     
+    if (!password || password.length < 6) {
+      toast.error('Please enter a valid password (at least 6 characters)');
+      return;
+    }
+    
     if (!otp || otp.length !== 6) {
       toast.error('Please enter a valid 6-digit OTP');
       return;
@@ -90,19 +96,21 @@ const OTPLoginForm: React.FC<OTPLoginFormProps> = ({ onLoginSuccess }) => {
     }
     
     try {
-      console.log('Attempting login with:', { phone, otp });
-      const success = await login(phone, otp);
+      console.log('Attempting login with:', { phone, otp, password });
+      // Pass the password as the third parameter to the login function
+      const success = await login(phone, otp, password);
       
       if (success) {
         toast.success('Login successful!');
         setOtp('');
         setPhone('');
+        setPassword('');
         setOtpSent(false);
         onLoginSuccess();
       }
     } catch (error) {
       console.error('Login error:', error);
-      toast.error('Login failed. Please check your OTP and try again.');
+      toast.error('Login failed. Please check your credentials and try again.');
     }
   };
 
@@ -157,6 +165,28 @@ const OTPLoginForm: React.FC<OTPLoginFormProps> = ({ onLoginSuccess }) => {
                 {isDevelopmentMode() && !otpSent && (
                   <p className="text-xs text-muted-foreground mt-1">
                     For demo, use phone: 1234567890 (admin) or 9876543210 (voter)
+                  </p>
+                )}
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    disabled={isLoading}
+                    className="pl-10"
+                  />
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                </div>
+                {isDevelopmentMode() && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    For demo, use password: password123
                   </p>
                 )}
               </div>
@@ -257,6 +287,28 @@ const OTPLoginForm: React.FC<OTPLoginFormProps> = ({ onLoginSuccess }) => {
               {isDevelopmentMode() && !otpSent && (
                 <p className="text-xs text-muted-foreground mt-1">
                   For demo, use phone: 1234567890 (admin) or 9876543210 (voter)
+                </p>
+              )}
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="password-face">Password</Label>
+              <div className="relative">
+                <Input
+                  id="password-face"
+                  type="password"
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  disabled={isLoading}
+                  className="pl-10"
+                />
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              </div>
+              {isDevelopmentMode() && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  For demo, use password: password123
                 </p>
               )}
             </div>
