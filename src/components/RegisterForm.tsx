@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -5,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { User, CreditCard, Phone } from 'lucide-react';
+import { User, CreditCard, Phone, AtSign, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { FaceCapture } from '@/components/ui/face-capture';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -25,6 +26,9 @@ const RegisterForm: React.FC = () => {
   
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [addressId, setAddressId] = useState('');
   const [faceImage, setFaceImage] = useState('');
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
@@ -49,6 +53,22 @@ const RegisterForm: React.FC = () => {
       errors.phone = 'Phone number is required';
     } else if (phone.length !== 10) {
       errors.phone = 'Phone number must be 10 digits';
+    }
+    
+    if (email) {
+      if (!email.includes('@')) {
+        errors.email = 'Please enter a valid email address';
+      }
+      
+      if (password) {
+        if (password.length < 6) {
+          errors.password = 'Password must be at least 6 characters';
+        }
+        
+        if (password !== confirmPassword) {
+          errors.confirmPassword = 'Passwords do not match';
+        }
+      }
     }
     
     if (!addressId.trim()) {
@@ -140,7 +160,11 @@ const RegisterForm: React.FC = () => {
       return;
     }
     
-    const success = await register(name, phone, addressId);
+    // Only include email/password if both are provided
+    const emailToSend = email && password ? email : undefined;
+    const passwordToSend = email && password ? password : undefined;
+    
+    const success = await register(name, phone, addressId, emailToSend, passwordToSend);
     if (success) {
       if (faceImage) {
         toast.success('Registration successful! Face biometrics saved.');
@@ -197,6 +221,82 @@ const RegisterForm: React.FC = () => {
                 <p className="text-xs text-red-500 mt-1">{validationErrors.name}</p>
               )}
             </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="email">Email Address (Optional)</Label>
+              <div className="relative">
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="Enter your email address"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (validationErrors.email) {
+                      setValidationErrors({ ...validationErrors, email: '' });
+                    }
+                  }}
+                  className={`pl-10 ${validationErrors.email ? 'border-red-500' : ''}`}
+                />
+                <AtSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              </div>
+              {validationErrors.email && (
+                <p className="text-xs text-red-500 mt-1">{validationErrors.email}</p>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Email is optional but recommended for account recovery
+              </p>
+            </div>
+            
+            {email && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder="Create a secure password"
+                      value={password}
+                      onChange={(e) => {
+                        setPassword(e.target.value);
+                        if (validationErrors.password) {
+                          setValidationErrors({ ...validationErrors, password: '' });
+                        }
+                      }}
+                      className={`pl-10 ${validationErrors.password ? 'border-red-500' : ''}`}
+                    />
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  </div>
+                  {validationErrors.password && (
+                    <p className="text-xs text-red-500 mt-1">{validationErrors.password}</p>
+                  )}
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Confirm Password</Label>
+                  <div className="relative">
+                    <Input
+                      id="confirmPassword"
+                      type="password"
+                      placeholder="Confirm your password"
+                      value={confirmPassword}
+                      onChange={(e) => {
+                        setConfirmPassword(e.target.value);
+                        if (validationErrors.confirmPassword) {
+                          setValidationErrors({ ...validationErrors, confirmPassword: '' });
+                        }
+                      }}
+                      className={`pl-10 ${validationErrors.confirmPassword ? 'border-red-500' : ''}`}
+                    />
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  </div>
+                  {validationErrors.confirmPassword && (
+                    <p className="text-xs text-red-500 mt-1">{validationErrors.confirmPassword}</p>
+                  )}
+                </div>
+              </>
+            )}
             
             <div className="space-y-2">
               <Label htmlFor="phone">Phone Number</Label>

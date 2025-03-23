@@ -5,6 +5,7 @@ export interface LoginResponse {
     id: string;
     name: string;
     phone: string;
+    email?: string;
     isAdmin: boolean;
     hasVoted: boolean;
   };
@@ -28,6 +29,8 @@ export interface MockUser {
   id: string;
   name: string;
   phone: string;
+  email?: string;
+  password?: string;
   isAdmin: boolean;
   hasVoted: boolean;
   addressId?: string;

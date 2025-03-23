@@ -10,6 +10,7 @@ export const apiService = {
   // Auth services
   requestOTP: authService.requestOTP,
   verifyOTPAndLogin: authService.verifyOTPAndLogin,
+  loginWithEmailPassword: authService.loginWithEmailPassword,
   registerUser: authService.registerUser,
   
   // Vote services

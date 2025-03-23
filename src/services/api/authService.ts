@@ -104,9 +104,53 @@ export async function verifyOTPAndLogin(phone: string, otp: string): Promise<Log
 }
 
 /**
+ * Login with email and password
+ */
+export async function loginWithEmailPassword(email: string, password: string): Promise<LoginResponse> {
+  // Simulate API call delay
+  await delay(1000);
+  
+  // Get all users
+  const registeredUsers = loadRegisteredUsers();
+  const allUsers = [...MOCK_USERS, ...registeredUsers];
+  
+  // Find user by email
+  const user = allUsers.find(u => u.email?.toLowerCase() === email.toLowerCase());
+  
+  if (!user) {
+    return {
+      success: false,
+      message: "Email not found"
+    };
+  }
+  
+  // Check password
+  if (!user.password || user.password !== password) {
+    return {
+      success: false,
+      message: "Invalid password"
+    };
+  }
+  
+  console.log(`[DEV MODE] User logged in with email/password: ${email}`);
+  
+  return {
+    success: true,
+    user,
+    message: "Login successful"
+  };
+}
+
+/**
  * Register a new user
  */
-export async function registerUser(name: string, phone: string, addressId: string): Promise<RegisterResponse> {
+export async function registerUser(
+  name: string, 
+  phone: string, 
+  addressId: string, 
+  email?: string, 
+  password?: string
+): Promise<RegisterResponse> {
   // Simulate API call delay
   await delay(2000);
   
@@ -122,6 +166,14 @@ export async function registerUser(name: string, phone: string, addressId: strin
     };
   }
   
+  // Check if email already exists (if provided)
+  if (email && allUsers.some(user => user.email?.toLowerCase() === email.toLowerCase())) {
+    return {
+      success: false,
+      message: "Email already registered"
+    };
+  }
+  
   // Generate a new user ID
   const newUserId = Math.random().toString(36).substring(2, 10);
   
@@ -130,6 +182,8 @@ export async function registerUser(name: string, phone: string, addressId: strin
     id: newUserId,
     name,
     phone,
+    email,
+    password,
     addressId,
     isAdmin: false,
     hasVoted: false,
@@ -140,7 +194,7 @@ export async function registerUser(name: string, phone: string, addressId: strin
   registeredUsers.push(newUser);
   saveRegisteredUsers(registeredUsers);
   
-  console.log(`[DEV MODE] Registered new user: ${name}, ${phone}, ${addressId} with ID: ${newUserId}`);
+  console.log(`[DEV MODE] Registered new user: ${name}, ${phone}, ${email || 'no email'}, ${addressId} with ID: ${newUserId}`);
   
   return {
     success: true,

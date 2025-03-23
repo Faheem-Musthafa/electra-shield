@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { apiService } from '@/services/api';
@@ -7,6 +6,7 @@ interface User {
   id: string;
   name: string;
   phone: string;
+  email?: string;
   isAdmin: boolean;
   hasVoted: boolean;
 }
@@ -15,7 +15,8 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   login: (phone: string, otp: string) => Promise<boolean>;
-  register: (name: string, phone: string, addressId: string) => Promise<boolean>;
+  loginWithEmail: (email: string, password: string) => Promise<boolean>;
+  register: (name: string, phone: string, addressId: string, email?: string, password?: string) => Promise<boolean>;
   logout: () => void;
   requestOtp: (phone: string) => Promise<boolean>;
   isAuthenticated: boolean;
@@ -97,10 +98,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const register = async (name: string, phone: string, addressId: string): Promise<boolean> => {
+  const loginWithEmail = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     try {
-      const response = await apiService.registerUser(name, phone, addressId);
+      const response = await apiService.loginWithEmailPassword(email, password);
+      
+      if (response.success && response.user) {
+        setUser(response.user);
+        localStorage.setItem('electra-shield-user', JSON.stringify(response.user));
+        toast.success(response.message || 'Login successful!');
+        
+        if (response.user.isAdmin) {
+          toast.success('Admin privileges detected');
+        }
+        
+        setIsLoading(false);
+        return true;
+      } else {
+        toast.error(response.message || 'Invalid credentials');
+        setIsLoading(false);
+        return false;
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      toast.error('Login failed. Please try again.');
+      setIsLoading(false);
+      return false;
+    }
+  };
+
+  const register = async (
+    name: string, 
+    phone: string, 
+    addressId: string,
+    email?: string,
+    password?: string
+  ): Promise<boolean> => {
+    setIsLoading(true);
+    try {
+      const response = await apiService.registerUser(name, phone, addressId, email, password);
       
       if (response.success) {
         toast.success(response.message);
@@ -148,6 +184,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user, 
         isLoading, 
         login,
+        loginWithEmail,
         register, 
         logout, 
         requestOtp,
